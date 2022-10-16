@@ -1,0 +1,2690 @@
+---
+title: "GSCORR DEPRESSION STUDY"
+output:
+  word_document: default
+  extra_dependencies: ["caption", "setspace", "float"]
+  raw_tex: yes
+  keep_tex: yes
+  fig_caption: true
+  pdf_document: 
+   number_sections: true
+indent: yes
+date: '`r format(Sys.Date())`'
+header-includes: 
+- \usepackage{float}
+- \usepackage{caption}
+- \captionsetup[table]{position=bottom} 
+bibliography: references.bib
+zotero : true
+---
+
+# Methods
+
+The codes to replicate preprocessing, statistics, and production of figures can be found at ===. All statistical tests were performed in R 4.1.2 [@rcoreteam2022]. Wilcoxon tests were corrected with Bonferroni- Holmes method for multiple comparisons. Asterisks implies significance; ; \*: p\<.05, \*\*: p\<.01, \*\*\*: p\<.001, \*\*\*\*:p\<.0001
+
+## Data Acqusition and Task Designs
+
+We used fMRI data collected for a previous study [@simsek2017]. The data set includes 17 subjects who had at least two Major Depressive Episodes (MDD) with \>50% HAMD score reduction with pharmacotherapy and did not consult to psychiatrist apart from their routine follow-up (Mentioned as depression group from now on) and their sex/age/education matched control subjects. Maximum of HAMD-17 score of depression group is 17 (Supplementary Figure,6). Such a unique group has chosen to investigate trait depressive features rather than state [@liu2020; @nery2009; @ho2022]. In order to eliminate the effect of HAMD score differences between groups, HAMD scores has taken as covariate in comparison of fMRI metrics between groups (Supplementary Figure, 7). fMRI images were acquired on a 3.0 Tesla Siemens MAGNETOM Verio MRI scanner with Syngo software and 12-channel Head Matrix coil located at the Department of Neuroradiology, Ege University School of Medicine. High-resolution T1-weighted MP-RAGE gradient-echo anatomical images have the following protocol; 160 × 1 mm sagittal slices, TE: 2.21 ms, TR: 1600 ms, TI: 900 ms, FOV: 256 × 256 mm, image matrix resolution: 256 × 256. Anatomical scans were obtained after the fMRI experiment. T2-weighted Echo-planar imaging (EPI) scans were acquired for the task paradigm. EPI parameters were like following; 23 × 4 mm slices, interleaved from bottom to top (interslice gap: 1 mm, TE: 30 ms, TR: 2000 ms, flip angle: 60°, FOV: 192 × 192 mm, in-plane matrix resolution: 64 × 64, 1056 dynamic scans with 2-second duration).
+
+The task paradigm relies on emotional response to negative and neutral images [@simsek2017]. The task consists of 96 trials with 22 seconds each. Trials are composed of 5 parts. In the first part viewing the image lasts 4 seconds with "View" displayed on the screen. In the second part, subjects are asked to attend or reappraise to the negative stimuli while only attend to the neutral stimuli. "Attend" or "Reappraise" replaces with "View" for four more seconds. For negative images, "Reappraise" matched 30 pictures while "attend" matched 18 images. In the third part, a black screen appeared on the screen for 4 seconds. In order to evaluate the success of emotion suppression, subjects rate their emotion severity after the task command with four rating words paired with corresponding numbers (Weak (1), mild (2), moderate (3), strong (4)) with 2 seconds duration windows for each. Subjects were instructed to press a key with the right thumb located in their right hand. In the fifth part, "Relax" appears on the screen with 2 seconds duration to prepare subjects for the next trial.
+
+## Preprocessing
+
+Motion-Corrected BOLD Signal by fMRI (PACE) protocol is used in neuronal data analysis instead of BOLD. The PACE protocol scanner compares 3D volumes acquired in the first and second time-points of the BOLD scan, determines if any motion happened between two time points and changes the position of field-of-view before the third time-point is acquired. It has been shown that using the PACE protocol together with offline head motion correction with regressors associated with less signal loss due to head motion [@lanka2019] . Preprocessing of fMRI data was completed in Analysis of Functional Neuroimages Software (AFNI). The first two scans were discarded to guarantee proper magnetization. The remaining steps are in the following order; 1) slice-timing correction; 2) despiking; 3) spatial alignment of fMRI data to time frame with a minimum estimated motion; 4) alignment of anatomical data to MNI152 stereotactic space; 5) spatial alignment of fMRI data to skullstripped anatomical data; 6) resampling of voxels (3x3x3 mm isometric voxels); 7) temporal band-pass filtering between 0.01 Hz-0.1 Hz in order to minimize the low-frequency drift and high frequency physiological noise (respiratory/cardiac noise); 8)Offline head motion correction with six regressors. From there on, two data sets were produced; with and without global signal regression. It has been shown the neuronal source of global signal [@schölvinck2010] with its regression introduce non-existent correlations to fMRI data and loses correlations related physiologically [@scalabrini2020; @gotts2013; @zhang2019; @northoff; @damiani2021]. Data set without global signal regression was utilized as control data set to investigate effect of global signal. Quality control files of afni_proc.py demonstrated head motion above 0.3 mm is below 5% of time points for each subject, thus 17 subject with past depressive episodes and 14 control subjects included.
+
+## ROI Selection
+
+ROIs selected from a meta-analysis showing self related brain regions [@qin2020]. ROIs were selected according to three layers of self [@qin2020]. 8 mm radius sphere with each ROI before merging to make a compound ROI for each three layer with 3dmaskave. For each three layers BOLD signal with PACE protocol averaged to one. The calculation of global signal correlation (GSCORR) is explicated in the next section.
+
+ROIs selected from a meta-analysis that shows self-related brain regions [@qin2020]. ROIs are selected according to three layers of self [@qin2020]. 8 mm radius sphere with each ROI before merging to make a compound ROI for each three layers. For each three layer PACE-BOLD signal averaged to one. GSCORR is calculated for each layer for both data sets.
+
+## Calculation of Global Signal Correlation (GSCORR)
+
+Global signal correlation ($Z_{GSCORR}$) is the fisher-Z transformation of Pearson correlation's rho ($\rho$) value between the BOLD signal within spesific voxel/ROI ($x$) and averaged BOLD signal within gray matter mask ($y$). We calculated GSCORR for each three layer of Self.
+
+```{=tex}
+\begin{equation}
+\begin{aligned}
+& \rho=\frac{n\sum_{}^{}xy-(\sum_{}^{}x)(\sum_{}^{}y)}{\sqrt{[n\sum_{}^{}x^{2}-(\sum_{}^{}x)^{2}][n\sum_{}^{}y^{2}-(\sum_{}^{}y)^{2}]}} \\
+& Z_{GSCORR}=\frac{1}{2}ln(\frac{1+\rho}{1-\rho})
+\end{aligned}
+\end{equation}
+```
+Equation implemented in R 4.1.2 with custom script to calculate GSCORR values.
+
+## Statistical Methods
+
+GSCORR values were compared for each layer between groups with the Wilcoxon test due to the number of subjects below 30. Effect of HAMD score difference eliminated with ANVOCA. In order to examine the relation of group difference as a categorical variable with behavioral results (i.e., emotion severity), we utilized chi-square test. One subject was excluded from behavioral analysis because she pressed the button after every window during the fMRI task. For multiple answers during rating emotion, first answer is considered. The effect of continuous neuronal variable GSCORR on behavioral results investigated with Multinomial Logistic Regression (MLR). MLR allows us to investigate the probability of one event referencing another by the linear combination of independent variables (i.e., predictors, ex. eq. 1). In our model, GSCORR and group variables are predictor variables, and emotion severity is the outcome variable [@omary2021; @el-habil2012]. We have two models, one with GS not regressed GSCORR values and one with GS regressed GSCORR values. To prevent over-fitting, MLR model trained and tested with 10-fold cross-validation with 5 repeat. Two model constituted one with GS presented GSCORR values and one without GS regressed GSCORR values. Statistical analysis and MLR model is completed in R 4.1.2. Data tidied with tidyverse [@wickham2019], statistical analysis operationalized with *rstatix* [@alboukadelkassambara2021] and visualized by *ggplot2* [@hadleywickham2016] and ggpubr [@alboukadelkassambara2020] packages, where caret package [@maxkuhn2022] is utilized for MLR models. For logistic regression, reference response is considered mild for negative stimuli and weak for neutral stimuli because they have the highest number of responses.
+
+# Results
+
+## Neuronal Measure - Global Signal Correlation (GSCORR)
+
+```{r Library, warning=FALSE,message=FALSE,echo=FALSE}
+library(ggpubr);library(tidyverse);library(rstatix);library(reshape2);
+library(nnet);library(ggsci);library(knitr);library(pROC);library(caret);
+library(ggh4x);library(zoo);library(emmeans);library(ggpattern)
+```
+
+```{r Patients that included,echo=FALSE,message=FALSE,warning=FALSE}
+KEY<-data.frame(read.csv("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/Key.csv"))
+
+test<-KEY %>% slice(1:34) %>% mutate(HAMD=na.approx(HAMD))
+index_KEY<-which(test$HAMD<17)
+
+DEPTAB<-test %>% slice(1:20) %>% filter(
+  X %in% index_KEY
+)
+
+CONTAB<-test%>%slice(21:34)%>%dplyr::filter(
+  X %in% index_KEY
+)
+
+
+```
+
+```{r,echo=FALSE,eval=FALSE}
+cor.test(x=test1$mean_reac,y=KEY$HAMD[1:34],method = "spearman",na.action=na.omit)
+cor.test(x=test1$sd_reac,y=KEY$HAMD[1:34],method = "spearman",na.action=na.omit)
+cor.test(x=test1$cv,y=KEY$HAMD[1:34],method = "spearman",na.action=na.omit)
+
+cor.test(x=test2_attend$mean_reac,y=KEY$HAMD[1:34],method = "spearman",na.action=na.omit)
+cor.test(x=test2_attend$sd_reac,y=KEY$HAMD[1:34],method = "spearman",na.action=na.omit)
+cor.test(x=test2_attend$cv,y=KEY$HAMD[1:34],method = "spearman",na.action=na.omit)
+
+cor.test(x=test2_reappraise$mean_reac,y=KEY$HAMD[1:34],method = "spearman",na.action=na.omit)
+cor.test(x=test2_reappraise$sd_reac,y=KEY$HAMD[1:34],method = "spearman",na.action=na.omit)
+cor.test(x=test2_reappraise$cv,y=KEY$HAMD[1:34],method = "spearman",na.action=na.omit)
+```
+
+```{r Small Masks-Mother2Mother Level,echo=FALSE,message=FALSE,warning=FALSE,out.width="300px"}
+#Preparing Data
+load("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/DATA/RESTRICTED_GS_TOPO_ALL_SUBJ.Rdata")
+GS<-as.data.frame(t(Zrval[1:3,1:34]))
+colnames(GS)<-c("1-Int","2-Ext","3-Ment")
+GS$group<-as.factor(c(rep("dep",20),rep("cont",14)))
+GS$case<-as.factor(c(rep("dep",20),rep("cont",14)))
+id<-data.frame(id=c(1:nrow(GS)))
+GS<-GS %>% mutate(id)
+
+zz<-data.frame()
+index=c(1,2,3)
+for (i in c(1:34)) {
+  test<-as.matrix(GS[,1:3])
+  if (any(is.na(test[,index][i,]))) {
+    next
+  }
+  tt<-lm(as.array(test[,index][i,])~c(1:3))
+  zz[i,1]<-unname(tt$coefficients)[2]
+}
+colnames(zz)<-c("GS_Grad")
+GS<-GS %>% mutate(zz)
+
+
+GS<-GS%>% mutate(dif.1=GS$`2-Ext`-GS$`1-Int`
+)%>% mutate(dif.2=GS$`3-Ment`-GS$`2-Ext`
+)%>%mutate(dif.3=GS$`3-Ment`-GS$`1-Int`
+)%>%mutate(.data=data.frame(id=c(1:nrow(GS))))
+
+GS<-GS%>%dplyr::filter(
+  id %in% index_KEY
+)
+
+
+test_id <- GS %>%
+  gather(key = "level", value = "score","1-Int","2-Ext","3-Ment") %>%
+  convert_as_factor(id, group,level)
+
+A_stat.test <- test_id %>%
+  group_by(level) %>%
+  rstatix::wilcox_test(score ~ group) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+A_EFF_SIZE<- test_id %>%
+  group_by(level) %>%
+  wilcox_effsize(score ~ group)
+
+
+
+LvlLabels=c("Int","Ext","Ment")
+
+my_colors<-c("#E64B35FF","#4DBBD5FF")
+
+bxp <- ggboxplot(
+  test_id, x = "level", y = "score",size=1.5,
+  color = "group")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+ #labs(title = "GS Presented",
+  #     subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))
+  theme(text=element_text(size=20),strip.text.x = element_text(
+    size = 12, face = "bold"
+  ),legend.position="top",legend.title = element_text(size=20),legend.text = element_text(size=20))+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))
+
+stat.test_GS <- A_stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GS_level_GroupDif<-bxp + stat_pvalue_manual(
+  stat.test_GS,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+multiple.func <- function(x){c(sd = sd(x), median = median(x))}
+A_DEP<-sapply(GS[1:17,2:4], multiple.func)
+A_CONT<-sapply(GS[18:31,2:4], multiple.func)
+```
+
+```{r Small Masks-Mother2Mother Level-Topography,echo=FALSE,message=FALSE,warning=FALSE,out.width="300px"}
+#Preparing Data
+load("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/DATA/RESTRICTED_GS_TOPO_ALL_SUBJ.Rdata")
+GS<-as.data.frame(t(Zrval[1:3,1:34]))
+colnames(GS)<-c("1-Int","2-Ext","3-Ment")
+GS$group<-as.factor(c(rep("dep",20),rep("cont",14)))
+GS$case<-as.factor(c(rep("dep",20),rep("cont",14)))
+id<-data.frame(id=c(1:nrow(GS)))
+GS<-GS %>% mutate(id)
+
+zz<-data.frame()
+index=c(1,2,3)
+for (i in c(1:34)) {
+  test<-as.matrix(GS[,1:3])
+  if (any(is.na(test[,index][i,]))) {
+    next
+  }
+  tt<-lm(as.array(test[,index][i,])~c(1:3))
+  zz[i,1]<-unname(tt$coefficients)[2]
+}
+colnames(zz)<-c("GS_Grad")
+GS<-GS %>% mutate(zz)
+
+
+GS<-GS%>% mutate(dif.1=GS$`2-Ext`-GS$`1-Int`
+)%>% mutate(dif.2=GS$`3-Ment`-GS$`2-Ext`
+)%>%mutate(dif.3=GS$`3-Ment`-GS$`1-Int`
+)%>%mutate(.data=data.frame(id=c(1:nrow(GS))))
+
+GS<-GS%>%dplyr::filter(
+  id %in% index_KEY
+)
+
+test_id <- GS %>%
+  gather(key = "level", value = "score","1-Int","2-Ext","3-Ment") %>%
+  convert_as_factor(id, group,level)
+
+B_stat.test <- test_id %>%
+  group_by(group) %>%
+  rstatix::wilcox_test(score ~ level) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+B_EFF_SIZE<- test_id %>%
+  group_by(level) %>%
+  wilcox_effsize(score ~ group)
+
+LvlLabels=c("Int","Ext","Ment")
+
+# bxp <- ggboxplot(
+#   test_id, x = "level", y = "score",size=1.5,facet.by = "group")+
+#   ylab("GSCORR")+
+#   xlab("")+
+#   ylim(-0.3,1.5)+
+#  #labs(title = "GS Presented",
+#   #     subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))+
+#   theme(text=element_text(size=20),strip.text.x = element_text(
+#     size = 12, face = "bold"
+#   ),legend.position="none")+
+#   scale_x_discrete(labels=LvlLabels)+
+#   scale_color_jama()
+# 
+# stat.test_GS <- stat.test %>%
+#   add_xy_position(x = "level", dodge = 0.8)
+
+
+NAME<-c("Control","Depression")
+names(NAME)<-c("cont","dep")
+
+bxp<-ggplot(test_id, aes(x = level, y=score)) + 
+  geom_boxplot(aes(color=factor(case)),size=2) +
+  facet_grid2(
+    .~ group, scales="free_y", space="free_y",labeller = as_labeller(NAME),
+    strip = strip_themed(
+      background_x = list(element_rect(fill = "#4DBBD5FF"),
+                          element_rect(fill = "#E64B35FF")),
+                          text_x=element_text(face="bold"))
+    )+
+    theme_bw()+
+  theme(axis.text.x=element_text(size=20),
+    text=element_text(size=20),
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "none")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))
+
+stat.test_GS <- B_stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+
+GS_level_IntraDif<-bxp + stat_pvalue_manual(
+  stat.test_GS,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+multiple.func <- function(x){c(sd = sd(x), median = median(x))}
+B_DEP<-sapply(GS[1:17,2:4],multiple.func)
+B_CONT<-sapply(GS[18:31,2:4],multiple.func)
+```
+
+```{r Small Masks-Mother2Mother Difference Level,echo=FALSE,message=FALSE,warning=FALSE,out.width="300px",eval=FALSE}
+test_id <- GS %>%
+  gather(key = "level", value = "score","dif.1","dif.2","dif.3") %>%
+  convert_as_factor(id, group,level)
+
+stat.test <- test_id %>%
+  group_by(level) %>%
+  wilcox_test(score ~ group) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+DifLabels=c("Ext-Int","Ment-Ext","Ment-Int")
+
+bxp <- ggboxplot(
+  test_id, x = "level", y = "score",size=1.5,
+  color = "group")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+  #labs(title = "GS Presented",
+   #    subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))+
+  theme(text=element_text(size=20),strip.text.x = element_text(
+    size = 12, face = "bold"
+  ),legend.position="none")+
+  scale_x_discrete(labels=DifLabels)+
+  scale_color_npg(labels=c("Control","Depression"))
+
+
+stat.test_GS <- stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GS_LevelDif_group<-bxp + stat_pvalue_manual(
+  stat.test_GS,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+```
+
+```{r Small Masks-Mother2Mother Difference Level-Topography,echo=FALSE,message=FALSE,warning=FALSE,out.width="300px",eval=FALSE}
+test_id <- GS %>%
+  gather(key = "level", value = "score","dif.1","dif.2","dif.3") %>%
+  convert_as_factor(id, group,level)
+
+stat.test <- test_id %>%
+  group_by(group) %>%
+  wilcox_test(score ~ level) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+DifLabels=c("Ext-Int","Ment-Ext","Ment-Int")
+
+#Old figure without different color in facet labels. Different function needed
+# bxp <- ggboxplot(
+#   test_id, x = "level", y = "score",size=1.5,facet.by = "group")+
+#   ylab("GSCORR")+
+#   xlab("")+
+#   ylim(-0.3,1.5)+
+#   #labs(title = "GS Presented",
+#   #     subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))+
+#   theme(text=element_text(size=16),strip.text.x = element_text(
+#     size = 12, face = "bold"
+#   ),legend.position="none")+
+#   scale_x_discrete(labels=DifLabels)+
+#   scale_color_jama(labels=c("Ext-Int","Ment-Ext","Ment-Int"))
+
+NAME<-c("Control","Depression")
+names(NAME)<-c("cont","dep")
+
+bxp<-ggplot(test_id, aes(x = level, y=score)) + 
+  geom_boxplot(size=2) +
+  facet_grid2(
+    .~ group, scales="free_y", space="free_y",labeller = as_labeller(NAME),
+    strip = strip_themed(
+      background_x = list(element_rect(fill = "#E64B35FF"),
+                          element_rect(fill = "#4DBBD5FF")),
+                          text_x=element_text(face="bold"))
+    )+
+    theme_bw()+
+  theme(axis.text.x=element_text(size=16),
+    text=element_text(size=20),
+    element_line(colour = "black"),
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())+
+  ylab("GSCORR")+
+  ylim(-0.3,1.5)+
+  xlab("")+
+  scale_x_discrete(labels=DifLabels)
+
+stat.test_GS <- stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GS_LevelDif_Intragroup<-bxp + stat_pvalue_manual(
+  stat.test_GS,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+```
+
+```{r Fig_2,echo=FALSE,warning=FALSE,message=FALSE,results='hide'}
+figure_2<-ggarrange(GS_level_GroupDif,GS_level_IntraDif,nrow = 1,ncol = 2,labels = "AUTO",font.label = list(size=20))
+png(file="/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/Figure_2.png",
+    width=1080, height=540)
+annotate_figure(figure_2,top=text_grob("Global Signal Presented",face = "bold",size = 24))
+dev.off()
+```
+
+```{r Effect of HAMD and BDI scores on Group difference,echo=FALSE,out.width="70%",results='hide',message=FALSE}
+#https://www.datanovia.com/en/lessons/ancova-in-r/#:~:text=The%20Analysis%20of%20Covariance%20(ANCOVA,two%20or%20more%20independent%20groups.
+HAMD<-KEY %>% slice(1:34
+              )%>% mutate(HAMD=na.approx(HAMD)
+              )%>% mutate(MED=MEDICATION
+              )%>%filter(HAMD<17
+              )%>%select(X,HAMD,MED)
+
+test<-GS%>%select(id,`1-Int`,`2-Ext`,`3-Ment`)
+test<-melt(id.vars="id",data=test
+           )%>%mutate(HAMD=rep(HAMD$HAMD,3)
+           )%>%mutate(CASE=rep(GS$group,3))
+
+MED=rep(HAMD$MED,3)
+test<-test%>%mutate(MED)
+colnames(test)[2]<-"LEVEL"
+
+
+
+res.aov <- test %>% group_by(LEVEL) %>%
+anova_test(value ~ HAMD + CASE)
+
+res.aov_Int<-test[1:31,]%>% anova_test(value ~ HAMD + CASE)
+get_test_label(res.aov_Int,detailed = TRUE)
+
+res.aov_Ext<-test[32:62,]%>% anova_test(value ~ HAMD + CASE)
+get_test_label(res.aov_Ext,detailed = TRUE)
+
+res.aov_Ment<-test[63:93,]%>% anova_test(value ~ HAMD + CASE)
+get_test_label(res.aov_Ment,detailed = TRUE)
+
+
+get_anova_table(res.aov)
+
+library(emmeans)
+pwc <- test %>% 
+  group_by(LEVEL) %>%
+  emmeans_test(
+    value ~ CASE, covariate = HAMD,
+    p.adjust.method = "bonferroni"
+    ) %>% adjust_pvalue(method = "bonferroni"
+    ) %>% add_significance("p.adj")
+
+pwc
+
+
+pwc <- pwc %>% add_xy_position(comparisons = list(c("group1", "group2")), fun = "mean_se")
+
+NAME<-c("Interoceptive","Exteroceptive","Mental")
+names(NAME)<-c("1-Int","2-Ext","3-Ment")
+
+EMMEANS<-ggline(get_emmeans(pwc),
+       x = "CASE", 
+       y = "emmean",
+       facet.by = "LEVEL",
+       panel.labs = list(LEVEL=NAME),size = 2)+
+  scale_x_discrete(labels=c("Control","Depression"))+
+  xlab("")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high,colour=factor(CASE)),width = 0.2,size=3) + 
+  stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE,size=8) +
+  labs(caption = get_pwc_label(pwc))+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))+
+  theme(legend.position = "none",text=element_text(size=12),
+        axis.text=element_text(size=7,face="bold"))
+
+#Other way to do above 
+#https://towardsdatascience.com/doing-and-reporting-your-first-anova-and-ancova-in-r-1d820940f2ef
+fit2=aov(value~HAMD+CASE,test)
+tab<-Anova(fit2, type="III") # For Anova this should be type 3 
+```
+
+```{r Adding medication as covariate}
+test<-test %>% na.omit()
+
+library(emmeans)
+pwc <- test %>% 
+  group_by(LEVEL) %>%
+  emmeans_test(
+    value ~ CASE, covariate = c("HAMD","MED"),
+    p.adjust.method = "bonferroni"
+    ) %>% adjust_pvalue(method = "bonferroni"
+    ) %>% add_significance("p.adj")
+pwc
+
+pwc <- pwc %>% add_xy_position(comparisons = list(c("group1", "group2")), fun = "mean_se")
+
+NAME<-c("Interoceptive","Exteroceptive","Mental")
+names(NAME)<-c("1-Int","2-Ext","3-Ment")
+
+EMMEANS_MED<-ggline(get_emmeans(pwc),
+       x = "CASE", 
+       y = "emmean",
+       facet.by = "LEVEL",
+       panel.labs = list(LEVEL=NAME),size = 2)+
+  scale_x_discrete(labels=c("Control","Depression"))+
+  xlab("")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high,colour=factor(CASE)),width = 0.2,size=3) + 
+  stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE,size=8) +
+  labs(caption = get_pwc_label(pwc))+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))+
+  theme(legend.position = "none",text=element_text(size=12),
+        axis.text=element_text(size=7,face="bold"))
+```
+
+```{r Fig_2 Inserting Neutral Bars,out.width = "100%",echo=FALSE}
+#| fig.cap= "Comparison of GSCORR among three layers of self. (A) In Wilcoxon test, past MDD episodes group shows greater GSCORR in exteroceptive (Mdn=0.239,p<.05) and mental (Mdn=0.177,p<.05) layers. Three-layer GSCORR compared with each other with the Wilcoxon test. The group with past MDD episodes exhibits higher exteroceptive and mental GSCORR than interoceptive. No difference exists for the control group. Int= Interoceptive, Ext= Exteroceptive, Ment= Mental. Asterisks denotes p<.05."
+include_graphics("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/Figure_2.png")
+```
+
+Exteroceptive layer GSCORR between control (Mdn=`r round(A_CONT["median","2-Ext"],3)`) and past MDD episodes (Mdn=`r round(A_DEP["median","2-Ext"],3)`) group states that there is a statistically significant difference, p= `r round(A_stat.test$p.adj[2],3)`,r=`r round(A_EFF_SIZE$effsize[2],3)` (Figure 1A).In addition, mental layer GSCORR shows statistically signiciant difference between control (Mdn=`r round(A_CONT["median","3-Ment"],3)`) and past MDD episodes (Mdn=`r round(A_DEP["median","3-Ment"],3)`), p= `r round(A_stat.test$p.adj[3],3)`,r=`r round(A_EFF_SIZE$effsize[3],3)` (Figure 1A). The covariate, HAMD scores, was not significantly related to the GSCORR scores, F(1,90)= 2.921, p=.090. However, when HAMD scores are controlled, past MDD episodes significantly effect the GSCORR, F(1,90)=7.546, p=.007. Consistent with Wilcoxon test, mean of GSCORR is significantly greater at Exteroceptive (Control=0.001 +/-0.056, Depression= 0.307 +/- 0.049, p=0.002) and Mental (Control=0.021 +/-0.056, Depression= 0.251 +/- 0.049, p=0.030) layers, when HAMD scores are taken as covariate (Supplemantary figure 2). When medication is added as covariate with HAMD for the subjects that has medication information, results are consistent for both exteroceptive (Control=-0.060 +/-0.081, Depression= 0.362 +/- 0.081, p=0.015) and mental (Control=-0.042 +/-0.081, Depression= 0.353 +/- 0.081, p=0.025). Covariate analysis shows us that two group GSCORR scores are significantly different independent of HAMD scores and medication, which allows us to investigate trait features of depression.
+
+In the comparison of layer's GSCORR there is no significant difference in control group; however, in depression group exteroceptive (Mdn=`r round(B_DEP["median","2-Ext"],3)`,p=.001) and mental layer GSCORR (Mdn=`r round(B_DEP["median","3-Ment"],3)`,p=.002) is significantly greater than interoceptive (Figure 1B). In other words hierarchy between layers in GSCORR is different in past MDD episode group ($Ext\cong Ment > Int$) than the control group ($Ext\cong Ment \cong Int$).
+
+As control data set, regression of GS from neuronal data eliminates group differences with no significant layer comparison between groups (Supplementary figure 3A). The hierarchy between layers has same pattern for both groups ($Ext\cong Ment > Int$, Supplementary figure 3B).
+
+In sum, the exteroceptive and mental layer shows greater GSCORR in the past MDD episode group than control, independent of HAMD scores. Exteroceptive and mental layers shows greater GSCORR than interoceptive layer in depression group, where none exists for control.
+
+## Behavioral Data
+
+```{r Preparing Task Data,echo=FALSE,message=FALSE,warning=FALSE,results='hide'}
+all_subj=tibble(KEY=character(),subj=character(),group=character(),trial=integer(),emotion=character(),task=character(),response=numeric())
+subj_list=c()
+for (i in c(1:34)){subj_list[i]=paste("subj_",i,sep = "")}
+for (t in c(1:length(subj_list))){
+  if(t %in% (c(1:20))){setwd(paste("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/DATA/DM/",subj_list[t],"/",sep = ""))}
+  if(t %in% (c(21:34))){setwd(paste("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/DATA/CM/",subj_list[t],"/",sep = ""))}
+  files<-list.files(pattern = "*_Behav.Rda",full.names = TRUE, recursive = TRUE)
+  if(length(files)==0){next}
+  if(files=="./Fatma Balın_Behav.Rda"){next}
+  if(subj_list[t]=="subj_5" | subj_list[t]=="subj_7" | subj_list[t]=="subj_16"){next}
+  load(files)
+  KEY=c(rep(subj_list[t],times=nrow(test)))
+  test<-test %>% mutate(.before=subj,KEY)
+  all_subj<-all_subj %>% add_row(test)
+}
+
+
+test1=tibble(KEY=character(),group=character(),mean_reac=double(),sd_reac=double(),cv=double(),n=integer())
+subj_list=c()
+for (i in c(1:34)){subj_list[i]=paste("subj_",i,sep = "")}
+
+task1<-all_subj %>% filter(emotion=="notr") %>% filter(task=="attend")
+
+for (i in c(1:length(subj_list))){
+  if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+  carry<-task1 %>% filter(KEY==subj_list[i]) %>% summarise(mean_reac=mean(response,na.rm=TRUE),sd_reac=sd(response,na.rm = TRUE),n=n())
+  t<-all_subj %>% filter(KEY==subj_list[i])
+  carry<-cbind(group=t$group[1],carry)
+  carry<-cbind(KEY=subj_list[i],carry)
+  carry$cv<-carry$sd_reac/carry$mean_reac
+  test1<-test1 %>% add_row(carry)  
+}
+
+test1<- test1 %>% mutate(GS_Int=GS[,"1-Int"]
+)%>% mutate(GS_Ext=GS[,"2-Ext"]
+)%>% mutate(GS_Ment=GS[,"3-Ment"]
+)%>% mutate(GS_Grad=GS[,"GS_Grad"]
+)%>% mutate(case=GS[,"case"])
+
+###Negative Stimuli#############
+test2_attend=tibble(KEY=character(),group=character(),mean_reac=double(),sd_reac=double(),cv=double(),n=integer())
+subj_list=c()
+for (i in c(1:34)){subj_list[i]=paste("subj_",i,sep = "")}
+
+for (i in c(1:length(subj_list))){
+   if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+  carry<-all_subj %>% filter(emotion=="negatif") %>% filter(KEY==subj_list[i]) %>% filter(task=="attend") %>% summarise(mean_reac=mean(response,na.rm=TRUE),sd_reac=sd(response,na.rm = TRUE),n=n())
+  t<-all_subj %>% filter(KEY==subj_list[i])
+  carry<-cbind(group=t$group[1],carry)
+  carry<-cbind(KEY=subj_list[i],carry)
+  carry$cv<-carry$sd_reac/carry$mean_reac
+  test2_attend<-test2_attend %>% add_row(carry)  
+}
+
+test2_reappraise=tibble(KEY=character(),group=character(),mean_reac=double(),sd_reac=double(),cv=double(),n=integer())
+subj_list=c()
+for (i in c(1:34)){subj_list[i]=paste("subj_",i,sep = "")}
+
+for (i in c(1:length(subj_list))){
+   if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+  carry<-all_subj %>% filter(emotion=="negatif") %>% filter(KEY==subj_list[i]) %>% filter(task=="azalt") %>% summarise(mean_reac=mean(response,na.rm=TRUE),sd_reac=sd(response,na.rm = TRUE),n=n())
+  t<-all_subj %>% filter(KEY==subj_list[i])
+  carry<-cbind(group=t$group[1],carry)
+  carry<-cbind(KEY=subj_list[i],carry)
+  carry$cv<-carry$sd_reac/carry$mean_reac
+  test2_reappraise<-test2_reappraise %>% add_row(carry)  
+}
+
+test2_attend<- test2_attend %>% mutate(GS_Int=GS[,"1-Int"]
+)%>% mutate(GS_Ext=GS[,"2-Ext"]
+)%>% mutate(GS_Ment=GS[,"3-Ment"]
+)%>% mutate(GS_Grad=GS[,"GS_Grad"]
+)%>% mutate(case=GS[,"case"])
+
+test2_reappraise<- test2_reappraise %>% mutate(GS_Int=GS[,"1-Int"]
+)%>% mutate(GS_Ext=GS[,"2-Ext"]
+)%>% mutate(GS_Ment=GS[,"3-Ment"]
+)%>% mutate(GS_Grad=GS[,"GS_Grad"]
+)%>% mutate(case=GS[,"case"])
+
+```
+
+```{r Composite Behavioral Figure,echo=FALSE,message=FALSE,warning=FALSE,out.width="70%",fig.pos="H"}
+#| fig.cap="Comparison in emotion severity to the different stimuli in past depression compared to control group. The left column shows emotion severity from 1 to 4 when encountered with negative or neutral stimuli. The left column shows the observed number of responses (striped) and expected number of responses (dotted) according to the chi distribution.  The Chi-square test's  Z-normalized (standardized) Pearson residuals show significant differences between observed and expected responses. In the right column, standardized Pearson residuals show whether the observed response is significantly different from the expected response according to the chi-square distribution. The horizontal solid line represents the p=.05 cut-off for z-normal standardized residuals. The horizontal dotted line represents p=.001, and dot-dashed line represents the p=.0001 cut-off. A) During negative stimuli with attending, group difference is related to emotion severity in the Chi-square test. B) Past MDD episode related to the strong emotional reaction to negative stimuli while attending. C) During negative stimuli with reappraising, group difference is related to emotion severity in the Chi-square test. In addition, d) During reappraising the negative stimuli, the control group related with the weak emotional response (1), whereas past MDD episodes group related with moderate (3), suggesting that the control group is more successful in emotion suppression. E) While attending the neutral stimuli, group difference is related to emotion severity in the Chi-square test. F) Past MDD episode group related to a higher emotional response to neutral stimuli, whereas the control group did not relate."
+
+########------NEUTRAL----------
+task1<-all_subj %>% filter(emotion=="notr") %>% filter(task=="attend")%>% filter(group %in% c("DM","CM"))
+#count(task1,response,group) # Shows number of pressing 
+
+# xtab <- as.table(rbind(
+#   c(370, 227, 22, 1),
+#   c(477, 296, 72, 26)
+# ))
+
+
+xtab <- as.table(rbind(
+  c(370, 227, 22, 1),
+  c(393, 255, 62, 20)
+))
+
+
+dimnames(xtab) <- list(
+  Group = c("Control", "Depression"),
+  Class = c("1", "2", "3", "4")
+)
+
+chisq<-chisq.test(xtab)
+library(corrplot)
+
+t<-chisq_test(xtab)
+tt<-pairwise_chisq_gof_test(xtab) # Interaction between cells
+
+#Histogram - OLD 
+# zz<-as.data.frame(chisq$observed)%>%mutate(type=rep("1-Obs",8))
+# dd<-as.data.frame(chisq$expected)
+# dd_long<-melt(dd)%>%mutate(.before="variable",Group=rep(c("Control","Depression"),4))%>%mutate(type=rep("2-Exp",8))
+# colnames(dd_long)<-c("Group","Class","Freq","type")
+# 
+# test_long<-rbind(zz,dd_long)
+# 
+# NAME<-c("Control","Depression")
+# names(NAME)<-c("Control","Depression")
+# 
+# test1_bar<-ggbarplot(test_long,x="Class",y="Freq",fill ="type",
+#                      position = position_dodge(0.8))+
+#   facet_wrap(~Group,
+#              labeller = as_labeller(NAME))+
+#   ylab("Frequency of Responses")+
+#   xlab("Emotion Severity")+
+#   theme(text=element_text(size=15),plot.subtitle = element_text(size=15),legend.position="none")+
+#   labs(title="Neutral-Attend",subtitle = get_test_label(t, detailed = TRUE))+
+#   scale_fill_jco(name="Responses",labels=c("Observed", "Expected"))
+
+zz<-as.data.frame(chisq$observed)%>%mutate(type=rep("Observed",8))
+dd<-as.data.frame(chisq$expected)
+dd_long<-melt(dd)%>%mutate(.before="variable",Group=rep(c("Control","Depression"),4))%>%mutate(type=rep("Expected",8))
+colnames(dd_long)<-c("Group","Class","Freq","Type")
+
+tt<-tibble(Group=character(),Class=character(),Freq=numeric(),Type=character())
+for (i in c(1:8)) {
+  tt[2*i-1,]<-zz[i,]
+  tt[2*i,]<-dd_long[i,]
+}
+
+test1_bar<-ggplot(data = tt, aes(x = Class,y=Freq,fill = Group, pattern = Type)) +
+  geom_bar_pattern(position = position_dodge2(preserve = "single",padding=0.2),
+                   color = "black",
+                   stat="identity",
+                   pattern_fill = "black",
+                   pattern_angle = 45,
+                   pattern_density = 0.1,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.6)+
+  scale_fill_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "none")+
+  theme(text=element_text(size=15))+
+  xlab("Emotion Severity")+
+  ylab("Number of Response")+
+  labs(title="Neutral-Attend",subtitle = get_test_label(t, detailed = TRUE))
+  
+#ARROW CREATOR
+# data.segm_base<-data.frame(x=1.5,y=355,xend=1.5,yend=370,
+#                       Group="Control")
+# data.segm_arrow<-data.frame(x=1.5,y=363,xend=2,yend=363,Group="Control")
+# f_labels <- data.frame(Group = c("Control", "Depression"), label = c("Pearson \nResiduals",""))
+# 
+# test1_bar<-test1_bar+
+#   geom_segment(data=data.segm_base,
+#                aes(x=x,y=y,yend=yend,xend=xend,colour="red"),inherit.aes=FALSE,size=2.5,show.legend = FALSE)+
+#   geom_segment(data=data.segm_arrow,
+#                aes(x=x,y=y,yend=yend,xend=xend,size=0.1,colour="red"),
+#                arrow = arrow(length = unit(0.2,"cm")),inherit.aes=FALSE,show.legend = FALSE)+
+#   geom_text(x=3.3,y=363,aes(label=label),data=f_labels,size=8,show.legend = FALSE)
+#   
+
+#  
+stat.test<-pairwise_prop_test(xtab)%>%adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+#Std residuals
+dd<-as.data.frame(chisq$stdres)
+
+test1_res<-ggbarplot(dd,x="Class",y="Freq",fill ="Group",
+                     label = c("","","","","**","**","***","***"),
+                     lab.vjust = -0.1,
+                     lab.size = 10,
+                     position = position_dodge(0.8))+
+  ylim(-5,5)+
+  geom_hline(yintercept = 4.369,linetype="dotdash")+
+  geom_hline(yintercept = -4.369,linetype="dotdash")+
+  geom_hline(yintercept=3.836,linetype="dotted")+ #Corrected with .001/8(cell number)
+  geom_hline(yintercept=-3.836,linetype="dotted")+
+  geom_hline(yintercept = 2.734,linetype="solid")+
+  geom_hline(yintercept = -2.734,linetype="solid")+
+  ylab("Standardized Pearson Residuals")+
+  xlab("Emotion Severity")+
+  theme(text=element_text(size=15),legend.position="none")+
+  scale_fill_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))
+
+final_Notr<-ggarrange(
+  test1_bar,test1_res,ncol=2,nrow = 1,
+  align = "h",
+  labels = c("E","F"),
+  font.label = list(size=20),
+  heights = c(0.50, 0.50)
+)
+#######------NEGATIVE ATTEND-----------------
+task2<-all_subj %>% filter(emotion=="negatif") %>% filter(task=="attend") %>% filter(group %in% c("DM","CM"))
+#count(task2,response,group) # Shows number of pressing 
+xtab <- as.table(rbind(
+  c(24, 109, 86, 31),
+  c(17, 92, 103, 70)
+))
+
+dimnames(xtab) <- list(
+  Group = c("Control", "Depression"),
+  Class = c("1", "2", "3", "4")
+)
+
+chisq<-chisq.test(xtab)
+library(corrplot)
+
+t<-chisq_test(xtab)
+tt<-pairwise_chisq_gof_test(xtab) # Interaction between cells
+
+#Histogram
+zz<-as.data.frame(chisq$observed)%>%mutate(type=rep("Observed",8))
+dd<-as.data.frame(chisq$expected)
+dd_long<-melt(dd)%>%mutate(.before="variable",Group=rep(c("Control","Depression"),4))%>%mutate(type=rep("Expected",8))
+colnames(dd_long)<-c("Group","Class","Freq","Type")
+
+tt<-tibble(Group=character(),Class=character(),Freq=numeric(),Type=character())
+for (i in c(1:8)) {
+  tt[2*i-1,]<-zz[i,]
+  tt[2*i,]<-dd_long[i,]
+}
+
+test1_bar<-ggplot(data = tt, aes(x = Class,y=Freq,fill = Group, pattern = Type)) +
+  geom_bar_pattern(position = position_dodge2(preserve = "single",padding=0.2),
+                   color = "black",
+                   stat="identity",
+                   pattern_fill = "black",
+                   pattern_angle = 45,
+                   pattern_density = 0.1,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.6)+
+  scale_fill_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "top")+
+  theme(text=element_text(size=15))+
+  xlab("Emotion Severity")+
+  ylab("Number of Response")+
+  labs(title="Negative-Attend",subtitle = get_test_label(t, detailed = TRUE))+
+  guides(Group = guide_legend(order = 2,nrow = 1),pattern = guide_legend(order = 1,nrow = 2))
+
+data.segm_base<-data.frame(x=1.7,y=92,xend=1.7,yend=110)
+data.segm_arrow<-data.frame(x=1.7,y=100,xend=1.3,yend=100)
+
+test1_bar<-test1_bar+
+  geom_segment(data=data.segm_base,
+               aes(x=x,y=y,yend=yend,xend=xend,colour="red"),inherit.aes=FALSE,size=2.5,show.legend = FALSE)+
+  geom_segment(data=data.segm_arrow,
+               aes(x=x,y=y,yend=yend,xend=xend,size=0.1,colour="red"),
+               arrow = arrow(length = unit(0.2,"cm")),inherit.aes=FALSE,show.legend = FALSE)+
+  annotate(geom="text",x=1,y=101,label=c("Pearson \nResiduals"),size=6.5,show.legend = FALSE)
+
+
+
+#  
+stat.test<-pairwise_prop_test(xtab)%>%adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+#Std residuals
+dd<-as.data.frame(chisq$stdres)
+
+test1_res<-ggbarplot(dd,x="Class",y="Freq",fill ="Group",
+                     label = c("","","","","","","*","*"),
+                     lab.size = 10,lab.vjust = -0.1,
+                     position = position_dodge(0.8))+
+  ylim(-5,5)+
+  geom_hline(yintercept = 4.369,linetype="dotdash")+
+  geom_hline(yintercept = -4.369,linetype="dotdash")+
+  geom_hline(yintercept=3.836,linetype="dotted")+ #Corrected with .001/8(cell number)
+  geom_hline(yintercept=-3.836,linetype="dotted")+
+  geom_hline(yintercept = 2.734,linetype="solid")+
+  geom_hline(yintercept = -2.734,linetype="solid")+
+  ylab("Standardized Pearson Residuals")+
+  xlab("Emotion Severity")+
+  theme(text=element_text(size=15),legend.position="top")+
+  scale_fill_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  scale_linetype_manual(name="Significance Level",labels=c("1","2","3"))
+
+final_NegAttend<-ggarrange(
+  test1_bar,test1_res,ncol=2,nrow = 1,
+  align = "h",
+  labels = c("A","B"),
+  font.label = list(size=20),
+  heights = c(0.50, 0.50)
+)
+
+########NEGATIVE REAPPRAISE###############
+
+task2<-all_subj %>% filter(emotion=="negatif") %>% filter(task=="azalt") %>% filter(group %in% c("DM","CM"))
+#count(task2,response,group) # Shows number of pressing 
+
+xtab <- as.table(rbind(
+  c(74, 227, 104, 14),
+  c(35, 241, 165, 29)
+))
+
+dimnames(xtab) <- list(
+  Group = c("Control", "Depression"),
+  Class = c("1", "2", "3", "4")
+)
+
+chisq<-chisq.test(xtab)
+library(corrplot)
+
+t<-chisq_test(xtab)
+tt<-pairwise_chisq_gof_test(xtab) # Interaction between cells
+
+#Histogram
+zz<-as.data.frame(chisq$observed)%>%mutate(type=rep("Observed",8))
+dd<-as.data.frame(chisq$expected)
+dd_long<-melt(dd)%>%mutate(.before="variable",Group=rep(c("Control","Depression"),4))%>%mutate(type=rep("Expected",8))
+colnames(dd_long)<-c("Group","Class","Freq","Type")
+
+tt<-tibble(Group=character(),Class=character(),Freq=numeric(),Type=character())
+for (i in c(1:8)) {
+  tt[2*i-1,]<-zz[i,]
+  tt[2*i,]<-dd_long[i,]
+}
+
+test1_bar<-ggplot(data = tt, aes(x = Class,y=Freq,fill = Group, pattern = Type)) +
+  geom_bar_pattern(position = position_dodge2(preserve = "single",padding=0.2),
+                   color = "black",
+                   stat="identity",
+                   pattern_fill = "black",
+                   pattern_angle = 45,
+                   pattern_density = 0.1,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.6)+
+  scale_fill_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "none")+
+  theme(text=element_text(size=15))+
+  xlab("Emotion Severity")+
+  ylab("Number of Response")+
+  labs(title="Negative-Reappraise",subtitle = get_test_label(t, detailed = TRUE))
+
+#  
+stat.test<-pairwise_prop_test(xtab)%>%adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+#Std residuals
+dd<-as.data.frame(chisq$stdres)
+
+test1_res<-ggbarplot(dd,x="Class",y="Freq",fill ="Group",
+                     label = c("****","****","","","*","*","",""),
+                     lab.size = 10,lab.vjust = -0.1,
+                     position = position_dodge(0.8))+
+  ylim(-6,6)+
+  geom_hline(yintercept = 4.369,linetype="dotdash")+
+  geom_hline(yintercept = -4.369,linetype="dotdash")+
+  geom_hline(yintercept=3.836,linetype="dotted")+ #Corrected with .001/8(cell number)
+  geom_hline(yintercept=-3.836,linetype="dotted")+
+  geom_hline(yintercept = 2.734,linetype="solid")+
+  geom_hline(yintercept = -2.734,linetype="solid")+
+  ylab("Standardized Pearson Residuals")+
+  xlab("Emotion Severity")+
+  theme(text=element_text(size=15),legend.position="none")+
+  scale_fill_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  scale_linetype_manual(name="Significance Level",labels=c("1","2","3"))
+
+final_NegReappraise<-ggarrange(
+  test1_bar,test1_res,ncol=2,nrow = 1,
+  align = "h",
+  labels = c("C","D"),
+  font.label = list(size=20),
+  heights = c(0.50, 0.50)
+)
+
+#Only including attending and not reappraise 
+final_behav_test<-ggarrange(final_NegAttend,final_NegReappraise,final_Notr,nrow = 3,ncol = 1,common.legend = TRUE)
+
+ggsave(final_behav_test,filename = "final_behav_test.png",
+         path="/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 800,height = 1080, dpi=72,units = c("px"))
+#Added Arrows from left to right by hand
+include_graphics("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/final_behav_test.png")
+
+```
+
+During attending to the negative stimuli (Figure 2A), the Chi-square test shows the relation between emotional response severity with having past MDD episodes is significant, $\chi^2(3,n=532)=17.4,p<.001$. Z-normalized (standardized) Pearson residuals of the Chi-square test show significance in the difference between observed and expected responses. That means strong (4) emotional responses related to past MDD episodes (p\<.05), whereas the control group shows no relation (Figure 2B). When participants try to reappraise the negative stimuli (Figure 2C), Chi-square test shows relation between emotional response severity with having past MDD episode is significant,$\chi^2(3,n=889)=30.61,p<.0001$. Standardized Pearson residuals show that the control group is related to weak (1) emotional response, whereas the depression group is related to moderate(3) (Figure 2D). When participants attempt to attend to the neutral stimuli, the Chi-square test shows that the relationship between emotional response severity and past MDD episode is significant,$\chi^2(3,n=1350)=29.79,p<.0001$. Groups differ, with the depression group related to moderate(3) and strong(4) emotional responses, whereas the control group did not.
+
+Results suggest the group with past MDD episodes demonstrates higher emotional reaction when maintaining emotion to the negative stimuli (Figure 2B), alongside failure in emotional reaction suppression and having a higher emotional response (Figure 2D) to negative stimuli. Subjects with past MDD episodes exhibit higher emotional reactions (moderate or strong) regardless of neutral or negative stimuli (Figure 2F).
+
+## Linking neuronal data to behavioral data - Multinomial Logistic Regression
+
+```{r Data for Linear and Multinomial Regression,echo=FALSE,message=FALSE,warning=FALSE,results='hide'}
+#| Creaiting Prediction data with new GSR values
+
+# GS VALUES
+load("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/DATA/RESTRICTED_GS_TOPO_ALL_SUBJ.Rdata")
+GS<-as.data.frame(t(Zrval[1:3,1:34]))
+colnames(GS)<-c("1-Int","2-Ext","3-Ment")
+GS$group<-as.factor(c(rep("dep",20),rep("cont",14)))
+GS$case<-as.factor(c(rep("dep",20),rep("cont",14)))
+id<-data.frame(id=c(1:nrow(GS)))
+GS<-GS %>% mutate(id)
+GS<-GS%>%dplyr::filter(
+  id %in% index_KEY
+)
+
+# GSR VALUES
+load("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/DATA/GSR_TOPO_RESTRICETED_MOTHERS_SUBJ.Rdata")
+GSR<-as.data.frame(t(Zrval[1:3,1:34]))
+colnames(GSR)<-c("1-Int","2-Ext","3-Ment")
+GSR$group<-as.factor(c(rep("dep",20),rep("cont",14)))
+GSR$case<-as.factor(c(rep("dep",20),rep("cont",14)))
+id<-data.frame(id=c(1:nrow(GSR)))
+GSR<-GSR %>% mutate(id)
+GSR<-GSR%>%dplyr::filter(
+  id %in% index_KEY
+)
+
+
+task2_reappraise<-all_subj %>% filter(emotion=="negatif") %>% filter(task=="azalt")
+task2_attend<-all_subj %>% filter(emotion=="negatif") %>% filter(task=="attend")
+
+task1<-task1 %>% mutate(GS_Int=NA,GS_Ext=NA,GS_Ment=NA,GSR_Int=NA,GSR_Ext=NA,GSR_Ment=NA)
+for (i in c(1:34)){
+  if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+RepNum<-nrow(task1[task1$KEY==subj_list[[i]],])
+task1[task1$KEY==subj_list[[i]],]$GS_Int<-rep(GS[i,"1-Int"],RepNum)
+task1[task1$KEY==subj_list[[i]],]$GS_Ext<-rep(GS[i,"2-Ext"],RepNum)
+task1[task1$KEY==subj_list[[i]],]$GS_Ment<-rep(GS[i,"3-Ment"],RepNum)
+task1[task1$KEY==subj_list[[i]],]$GSR_Int<-rep(GSR[i,"1-Int"],RepNum)
+task1[task1$KEY==subj_list[[i]],]$GSR_Ext<-rep(GSR[i,"2-Ext"],RepNum)
+task1[task1$KEY==subj_list[[i]],]$GSR_Ment<-rep(GSR[i,"3-Ment"],RepNum)
+}
+
+
+task2_attend<-task2_attend %>% mutate(GS_Int=NA,GS_Ext=NA,GS_Ment=NA,GSR_Int=NA,GSR_Ext=NA,GSR_Ment=NA)
+for (i in c(1:34)) {
+  if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+RepNum<-nrow(task2_attend[task2_attend$KEY==subj_list[[i]],])
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GS_Int<-rep(GS[i,"1-Int"],RepNum)
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GS_Ext<-rep(GS[i,"2-Ext"],RepNum)
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GS_Ment<-rep(GS[i,"3-Ment"],RepNum)
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GSR_Int<-rep(GSR[i,"1-Int"],RepNum)
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GSR_Ext<-rep(GSR[i,"2-Ext"],RepNum)
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GSR_Ment<-rep(GSR[i,"3-Ment"],RepNum)
+}
+
+
+task2_reappraise<-task2_reappraise %>% mutate(GS_Int=NA,GS_Ext=NA,GS_Ment=NA,GSR_Int=NA,GSR_Ext=NA,GSR_Ment=NA)
+for (i in c(1:34)) {
+  if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+RepNum<-nrow(task2_reappraise[task2_reappraise$KEY==subj_list[[i]],])
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GS_Int<-rep(GS[i,"1-Int"],RepNum)
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GS_Ext<-rep(GS[i,"2-Ext"],RepNum)
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GS_Ment<-rep(GS[i,"3-Ment"],RepNum)
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GSR_Int<-rep(GSR[i,"1-Int"],RepNum)
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GSR_Ext<-rep(GSR[i,"2-Ext"],RepNum)
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GSR_Ment<-rep(GSR[i,"3-Ment"],RepNum)
+}
+
+```
+
+### Negative Stimuli
+
+#### Attending to the emotion
+
+```{r Multinomial Logistic Regression-NegAttend,echo=FALSE,message=FALSE,warning=FALSE,message=FALSE,results='hide',fig.show='hide',eval=FALSE}
+
+#Multinomial regression without 
+task2_attend$response <-as.factor(task2_attend$response)
+set.seed(333)
+ind<-sample(2,nrow(task2_attend),
+            replace = TRUE,
+            prob=c(0.6,0.4))
+training<-task2_attend[ind==1,]
+testing<-task2_attend[ind==2,]
+
+training$response<-relevel(training$response,ref="2")
+
+###############+-+-+-+-+-Predicting with GS+-+-+-+-+-+-+-+-+-+-###########
+GSmodel<-multinom(response~GS_Ment+GS_Ext+GS_Int+group,data=training)
+
+z <- summary(GSmodel)$coefficients/summary(GSmodel)$standard.errors
+z
+
+psig_GS <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GS
+
+p<-predict(GSmodel,testing)
+
+#Gives accuracy. No Information Rate is when no model exist. Acc should be better
+# than that
+ConfMat_GS<-confusionMatrix(p,testing$response)
+#
+pp<-predict(GSmodel, newdata = testing, type = "probs", se = TRUE)
+#Roc Curves of probability
+r<-multiclass.roc(testing$response, pp, percent=T)
+# Responses compared with weak 
+r1<-r$rocs$`2/1`[[2]]
+r2<-r$rocs$`2/3`[[2]]
+r3<-r$rocs$`2/4`[[2]]
+
+
+plot.roc(r1,print.auc = TRUE,print.auc.x = 20,print.auc.y = 10,print.auc.pattern = sprintf("AUC: %0.3f", auc(r1)), col="red",cex.lab=1.5,print.auc.cex = 1.5)
+plot.roc(r2,print.auc = TRUE,print.auc.x = 20,print.auc.y = 20,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r2)), col="blue",print.auc.cex = 1.5)
+plot.roc(r3,print.auc = TRUE,print.auc.x = 20,print.auc.y = 30,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r3)), col="green",print.auc.cex = 1.5)
+title("Negative Attend -Global Signal Presented",line = 3)
+GS_ROC <- recordPlot() 
+## extract the coefficients from the model and exponentiate for relative risk
+RR_GS<-exp(coef(GSmodel))
+
+###############+-+-+-+-+-Predicting with GSR+-+-+-+-+-+-+-+-+-+-###########
+GSRmodel<-multinom(response~GSR_Int+GSR_Ment+GSR_Ext+group,data=training)
+
+z <- summary(GSRmodel)$coefficients/summary(GSRmodel)$standard.errors
+z
+
+psig_GSR <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GSR
+
+p<-predict(GSRmodel,testing)
+
+#Gives accuracy. No Information Rate is when no model exist. Acc should be better
+# than that
+ConfMat_GSR<-confusionMatrix(p,testing$response)
+#
+pp<-predict(GSRmodel, newdata = testing, type = "probs", se = TRUE)
+#Roc Curves of probability
+r<-multiclass.roc(testing$response, pp, percent=T)
+# Responses compared with weak 
+r1<-r$rocs$`2/1`[[2]]
+r2<-r$rocs$`2/3`[[2]]
+r3<-r$rocs$`2/4`[[2]]
+
+plot.roc(r1,print.auc = TRUE,print.auc.x = 20,print.auc.y = 10,print.auc.pattern = sprintf("AUC: %0.3f", auc(r1)), col="red",cex.lab=1.5,print.auc.cex = 1.5)
+plot.roc(r2,print.auc = TRUE,print.auc.x = 20,print.auc.y = 20,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r2)), col="blue",print.auc.cex = 1.5)
+plot.roc(r3,print.auc = TRUE,print.auc.x = 20,print.auc.y = 30,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r3)), col="green",print.auc.cex = 1.5)
+title("Negative Attend -Global Signal Regressed",line = 3)
+GSR_ROC <- recordPlot() 
+## extract the coefficients from the model and exponentiate for relative risk
+RR_GSR<-exp(coef(GSRmodel))
+
+```
+
+```{r,out.width="50%",echo=FALSE,eval=FALSE}
+
+par(mfrow=c(1,2)) 
+GS_ROC
+GSR_ROC
+par(mfrow=c(1,1))
+
+```
+
+```{r Negative_Attend Comparing k-fold Cross Validation MNL and Random Forests,echo=FALSE,warning=FALSE,error=FALSE,results='hide'}
+#Here since cross validation we use we avoid randomizing of train/test splitting
+#https://remiller1450.github.io/s230f19/caret3.html
+
+ACC<-matrix(ncol = 2,nrow = 3)
+colnames(ACC)<-c("GS","GSR")
+rownames(ACC)<-c("Negative Attend","Negative Reappraise","Neutral Attend")
+
+
+task2_attend$response <-as.factor(task2_attend$response)
+data=task2_attend
+data$group<-as.factor(data$group)
+data$CASE<-data$group
+data<-data %>% na.omit()
+#Names cannot start with numbers in R language
+data<-data %>% 
+  mutate(response = factor(response, 
+          labels = make.names(levels(response))))
+
+tuneGrid_mnl <- expand.grid(decay = seq(0, 1,by = 0.1))
+
+tControl <- trainControl(
+  method = "repeatedcv", #cross validation
+  number = 10, #10 folds
+  repeats = 5,
+  search = "random" #auto hyperparameter selection
+)
+
+#training$response<-relevel(training$response,ref="X1")
+
+data$response<-relevel(data$response,ref="X2")
+
+# model_mnl <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#                           data = training,
+#                           method = "multinom",
+#                           maxit = 100,
+#                           trace = FALSE, # suppress iterations
+#                           tuneGrid = tuneGrid_mnl,
+#                           trControl = tControl
+#                           )
+# 
+# 
+# caret::confusionMatrix(predict(model_mnl, 
+#                                newdata = testing, 
+#                                type = "raw"),
+#                                reference = testing$response)
+
+
+set.seed(123)
+fit1.GS <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+set.seed(123)
+fit1.GSR <- caret::train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+
+#Random Forest
+# set.seed(123)
+# fit2.GS <- train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# # 
+# set.seed(123)
+# fit2.GSR <- train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# 
+
+# rs <- resamples(list(mlr_GS = fit1.GS,mlr_GSR=fit1.GSR,rf_GS= fit2.GS,rf_GSR=fit2.GSR))
+# summary(rs)
+
+ConfMat_GS<-caret::confusionMatrix(predict(fit1.GS, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GS)$coefficients/summary(fit1.GS)$standard.errors
+z
+
+psig_GS <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GS
+
+ConfMat_GSR<-caret::confusionMatrix(predict(fit1.GSR, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GSR)$coefficients/summary(fit1.GSR)$standard.errors
+z
+
+psig_GSR <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GSR
+
+tt<-summary(fit1.GS$finalModel)
+RR_GS<-exp(tt$coefficients)
+tt<-summary(fit1.GSR$finalModel)
+RR_GSR<-exp(tt$coefficients)
+
+#+-+-+-Accuracy for table 
+ACC[1]<-round(unname(ConfMat_GS$overall[1]),3)
+ACC[4]<-round(unname(ConfMat_GSR$overall[1]),3)
+
+
+```
+
+In global signal is not regressed model for negative-attend, model accuracy with `r sprintf("%0.f%%", ConfMat_GS$overall["Accuracy"]*100)` with (p-value=`r round(ConfMat_GS$overall["AccuracyPValue"],3)`). Interoceptive, exteroceptive and mental level GSCORR significantly related with emotional response severity.
+
+```{=tex}
+\begin{equation}
+\begin{aligned}
+ln(\frac{P(Response=weak)}{P(Response=mild)})=Intercept + `r round(summary(fit1.GS)$coefficients[1,"GS_Int"],3)` \times (GSCORR_{Interoceptive}) + \\
+`r round(summary(fit1.GS)$coefficients[1,"GS_Ment"],3)` \times (GSCORR_{Mental})
+\end{aligned}
+\end{equation}
+```
+```{=tex}
+\begin{equation}
+\begin{aligned}
+ln(\frac{P(Response=moderate)}{P(Response=mild)})=Intercept + `r round(summary(fit1.GS)$coefficients[2,"GS_Int"],3)` \times (GSCORR_{Interoceptive}) + \\
+`r round(summary(fit1.GS)$coefficients[2,"GS_Ext"],3)` \times (GSCORR_{Exteroceptive}) + \\
+`r round(summary(fit1.GS)$coefficients[2,"CASEDM"],3)` \times (group=DM)
+\end{aligned}
+\end{equation}
+```
+```{=tex}
+\begin{equation}
+\begin{aligned}
+ln(\frac{P(Response=strong)}{P(Response=mild)})=Intercept + `r round(summary(fit1.GS)$coefficients[3,"CASEDM"],3)` \times (group=DM)
+\end{aligned}
+\end{equation}
+```
+In the global signal model, when a weak emotional response is compared to mild, the relative risk ratio (RRR) for a one-unit increase in the variable Interoceptive layer GSCORR is `r round(RR_GS[1,"GS_Int"],3)`.In contrast, a one-unit increase in the Mental layer GSCORR is `r round(RR_GS[1,"GS_Ment"],3)` (Eq. 2). Moderate emotional response compared to mild, relative risk ratio for a one-unit increase in the variable Interoceptive GSCORR is `r round(RR_GS[2,"GS_Int"],3)`, whereas a one-unit increase in the variable Exteroceptive GSCORR is `r round(RR_GS[2,"GS_Ext"],3)` (Eq. 3). Being a mother with depressive episode increases moderate responsex RRR by `r round(RR_GS[2,"CASEDM"],3)` and strong RRR by `r round(RR_GS[3,"CASEDM"],3)`.
+
+Results suggest an increase in interoceptive GSCORR increases weak and moderate emotional reactions, whereas an increase in Exteroceptive GSCORR decreases the chance of moderate emotional reaction (Figure 3). Increased Mental GSCORR decreases the chance of weak emotional response. Having past depressive episodes gradually increases the RRR of emotion severity from weak to strong. It can be argued that the interoceptive layer work antagonistically to exteroceptive mental layers during attending the negative emotion. However, when GS regressed from the model, only the Interoceptive layer relation remained significant (Supplementary figure, figure 9). Regression of global signal eliminates exteroceptive and mental layer relationship with behavioral data.
+
+```{r Change Multinomial Logistic Regression-Negative Attend,echo=FALSE,warning=FALSE,results='hide',message=FALSE}
+#| fig.cap="Probability of Emotional response according to GSCORR while attending to the negative stimuli. Interoceptive GSCORR increases the relative risk ratio of weak and moderate responses compared to mild. When exteroceptive level GSCORR increases, the probability of moderate emotional response decreases compared to mild. When Mental GSCORR increases, the probability of a weak emotional response decreases."
+############Interoceptive#########
+IntPred<-data %>% select(CASE,GS_Int,GS_Ext,GS_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GS_Int), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GS_Int"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.001)","Mild \n(Reference)","Moderate \n(p<0.05)","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pInt<-ggplot(lpp, aes(x = GS_Int, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "Negative Stimuli with attending")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+#############Exteroceptive########
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GS_Ext), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GS_Ext"), value.name = "probability")
+
+NAME<-c("Weak","Mild \n(Reference)","Moderate \n(p<0.05)","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GS_Ext, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+############Mental#######
+IntPred<-data %>% select(CASE,GS_Int,GS_Ext,GS_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GS_Ment), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GS_Ment"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.05)","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pMent<-ggplot(lpp, aes(x = GS_Ment, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+
+pNeg<-ggarrange(pInt,pExt,pMent,ncol = 3,common.legend = TRUE,align = "h")
+
+ggsave(pNeg,filename = "pNeg.png",
+         path="/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+pNeg
+```
+
+```{r Change GSR Multinomial Logistic Regression-Negative Attend,echo=FALSE,warning=FALSE,results='hide',message=FALSE,fig.show='hide'}
+
+############Interoceptive#########
+IntPred<-data %>% select(CASE,GSR_Int,GSR_Ext,GSR_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GSR_Int), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GSR_Int"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.05)","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pInt<-ggplot(lpp, aes(x = GSR_Int, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+  labs(title = "GS REGRESSED",subtitle = "Negative Stimuli with attending")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+#############Exteroceptive########
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GSR_Ext), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GSR_Ext"), value.name = "probability")
+
+NAME<-c("Weak","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GSR_Ext, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+############Mental#######
+IntPred<-data %>% select(CASE,GSR_Int,GSR_Ext,GSR_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GSR_Ment), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GSR_Ment"), value.name = "probability")
+
+NAME<-c("Weak","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pMent<-ggplot(lpp, aes(x = GSR_Ment, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+
+pNeg_Att_GSR<-ggarrange(pInt,pExt,pMent,ncol = 3,common.legend = TRUE,align = "h")
+
+ggsave(pNeg_Att_GSR,filename = "pNeg.png",
+         path="/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+```
+
+#### Reapprasing the emotion
+
+```{r Multinomial Logistic Regression-Reapprise,echo=FALSE,message=FALSE,warning=FALSE,eval=FALSE,results='hide',eval=FALSE}
+task2_reappraise$response <-as.factor(task2_reappraise$response)
+set.seed(444)
+ind<-sample(2,nrow(task2_reappraise),
+            replace = TRUE,
+            prob=c(0.6,0.4))
+training<-task2_reappraise[ind==1,]
+testing<-task2_reappraise[ind==2,]
+
+training$response<-relevel(training$response,ref="2")
+###############+-+-+-+-+-Predicting with GS+-+-+-+-+-+-+-+-+-+-###########
+GSmodel<-multinom(response~GS_Int+GS_Ext+GS_Ment+group,data=training)
+
+z <- summary(GSmodel)$coefficients/summary(GSmodel)$standard.errors
+z
+
+psig_GS <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GS
+
+p<-predict(GSmodel,testing)
+
+#Gives accuracy. No Information Rate is when no model exist. Acc should be better
+# than that
+ConfMat_GS<-confusionMatrix(p,testing$response)
+#
+pp<-predict(GSmodel, newdata = testing, type = "probs", se = TRUE)
+#Roc Curves of probability
+r<-multiclass.roc(testing$response, pp, percent=T)
+# Responses compared with weak 
+r1<-r$rocs$`2/1`[[2]]
+r2<-r$rocs$`2/3`[[2]]
+r3<-r$rocs$`2/4`[[2]]
+
+
+plot.roc(r1,print.auc = TRUE,print.auc.x = 20,print.auc.y = 10,print.auc.pattern = sprintf("AUC: %0.3f", auc(r1)), col="red",cex.lab=1.5,print.auc.cex = 1.5)
+plot.roc(r2,print.auc = TRUE,print.auc.x = 20,print.auc.y = 20,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r2)), col="blue",print.auc.cex = 1.5)
+plot.roc(r3,print.auc = TRUE,print.auc.x = 20,print.auc.y = 30,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r3)), col="green",print.auc.cex = 1.5)
+title("Negative Attend -Global Signal Presented",line = 3)
+GS_ROC <- recordPlot() 
+## extract the coefficients from the model and exponentiate for relative risk
+RR_GS<-exp(coef(GSmodel))
+
+###############+-+-+-+-+-Predicting with GSR+-+-+-+-+-+-+-+-+-+-###########
+GSRmodel<-multinom(response~GSR_Int+GSR_Ment+GSR_Ext+group,data=training)
+
+z <- summary(GSRmodel)$coefficients/summary(GSRmodel)$standard.errors
+z
+
+psig_GSR <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GSR
+
+p<-predict(GSRmodel,testing)
+
+#Gives accuracy. No Information Rate is when no model exist. Acc should be better
+# than that
+ConfMat_GSR<-confusionMatrix(p,testing$response)
+#
+pp<-predict(GSRmodel, newdata = testing, type = "probs", se = TRUE)
+#Roc Curves of probability
+r<-multiclass.roc(testing$response, pp, percent=T)
+# Responses compared with weak 
+r1<-r$rocs$`2/1`[[2]]
+r2<-r$rocs$`2/3`[[2]]
+r3<-r$rocs$`2/4`[[2]]
+
+plot.roc(r1,print.auc = TRUE,print.auc.x = 20,print.auc.y = 10,print.auc.pattern = sprintf("AUC: %0.3f", auc(r1)), col="red",cex.lab=1.5,print.auc.cex = 1.5)
+plot.roc(r2,print.auc = TRUE,print.auc.x = 20,print.auc.y = 20,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r2)), col="blue",print.auc.cex = 1.5)
+plot.roc(r3,print.auc = TRUE,print.auc.x = 20,print.auc.y = 30,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r3)), col="green",print.auc.cex = 1.5)
+title("Negative Attend -Global Signal Regressed",line = 3)
+GS_ROC <- recordPlot() 
+## extract the coefficients from the model and exponentiate for relative risk
+RR_GSR<-exp(coef(GSRmodel))
+```
+
+```{r Negative_Reappraise,Comparing k-fold Cross Validation MNL and Random Forest,echo=FALSE,warning=FALSE,error=FALSE,results='hide'}
+#Here since cross validation we use we avoid randomizing of train/test splitting
+#https://remiller1450.github.io/s230f19/caret3.html
+task2_reappraise$response <-as.factor(task2_reappraise$response)
+data=task2_reappraise
+data$group<-as.factor(data$group)
+data$CASE<-data$group
+data<-data %>% na.omit()
+#Names cannot start with numbers in R language
+data<-data %>% 
+  mutate(response = factor(response, 
+          labels = make.names(levels(response))))
+
+
+tuneGrid_mnl <- expand.grid(decay = seq(0, 1,by = 0.1))
+
+tControl <- trainControl(
+  method = "repeatedcv", #cross validation
+  number = 10, #10 folds
+  repeats = 5,
+  search = "random" #auto hyperparameter selection
+)
+
+#training$response<-relevel(training$response,ref="X1")
+
+data$response<-relevel(data$response,ref="X2")
+
+# model_mnl <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#                           data = training,
+#                           method = "multinom",
+#                           maxit = 100,
+#                           trace = FALSE, # suppress iterations
+#                           tuneGrid = tuneGrid_mnl,
+#                           trControl = tControl
+#                           )
+# 
+# 
+# caret::confusionMatrix(predict(model_mnl, 
+#                                newdata = testing, 
+#                                type = "raw"),
+#                                reference = testing$response)
+
+
+set.seed(123)
+fit1.GS <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+set.seed(123)
+fit1.GSR <- caret::train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+
+# Random Forest 
+# set.seed(123)
+# fit2.GS <- train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# 
+# # set.seed(123)
+# fit2.GSR <- train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+
+
+# rs <- resamples(list(mlr_GS = fit1.GS,mlr_GSR=fit1.GSR,rf_GS= fit2.GS,rf_GSR=fit2.GSR))
+# summary(rs)
+
+ConfMat_GS<-caret::confusionMatrix(predict(fit1.GS, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GS)$coefficients/summary(fit1.GS)$standard.errors
+z
+
+psig_GS <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GS
+
+ConfMat_GSR<-caret::confusionMatrix(predict(fit1.GSR, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GSR)$coefficients/summary(fit1.GSR)$standard.errors
+z
+
+psig_GSR <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GSR
+
+tt<-summary(fit1.GS$finalModel)
+RR_GS<-exp(tt$coefficients)
+tt<-summary(fit1.GSR$finalModel)
+RR_GSR<-exp(tt$coefficients)
+
+#+-+-+-+-
+ACC[2]<-round(unname(ConfMat_GS$overall[1]),3)
+ACC[5]<-round(unname(ConfMat_GSR$overall[1]),3)
+
+```
+
+In global signal correlation model for negative reappraise, model accuracy with `r sprintf("%0.f%%", ConfMat_GS$overall["Accuracy"]*100)` with p-value=`r round(ConfMat_GS$overall["AccuracyPValue"],3)` compared to null hypothesis where there is no model.
+
+```{=tex}
+\begin{equation}
+\begin{aligned}
+ln(\frac{P(Response=weak)}{P(Response=mild)})=Intercept + `r round(summary(fit1.GS)$coefficients[1,"GS_Int"],3)` \times GSCORR_{Interoceptive}+ \\
+`r round(summary(fit1.GS)$coefficients[1,"GS_Ext"],3)` \times GSCORR_{Exteroceptive}+ \\
+`r round(summary(fit1.GS)$coefficients[1,"CASEDM"],3)` \times (group=DM) 
+\end{aligned}
+\end{equation}
+```
+```{=tex}
+\begin{equation}
+\begin{aligned}
+ln(\frac{P(Response=moderate)}{P(Response=mild)})=Intercept + `r round(summary(fit1.GS)$coefficients[2,"GS_Ext"],3)` \times GSCORR_{Exteroceptive}+ \\
+`r round(summary(fit1.GS)$coefficients[2,"CASEDM"],3)` \times (group=DM) 
+\end{aligned}
+\end{equation}
+```
+```{=tex}
+\begin{equation}
+\begin{aligned}
+ln(\frac{P(Response=strong)}{P(Response=mild)})=Intercept + `r round(summary(fit1.GS)$coefficients[3,"GS_Int"],3)`^* \times 
+GSCORR_{Interoceptive}+ \\
+`r round(summary(fit1.GS)$coefficients[3,"GS_Ext"],3)` \times GSCORR_{Exteroceptive}+ \\
+`r round(summary(fit1.GS)$coefficients[3,"CASEDM"],3)` \times (group=DM) 
+\end{aligned}
+\end{equation}
+```
+In the Global signal not regressed model while reappraising the negative stimuli, a one-unit increase in the Interoceptive level GSCORR increased weak emotional response relative risk (RRR) by `r round(RR_GS[1,"GS_Int"],3)` compared to mild (Eq.5). Increase in one-unit GSCORR increases RRR of strong emotional reaction by `r round(RR_GS[3,"GS_Int"],3)`, marginally (p=0.07, Eq.7). However a one-unit increase in the Exteroceptive level GSCORR decreases relative risk of having moderate (`r round(RR_GS[2,"GS_Ext"],3)`,Eq.6) and strong (`r round(RR_GS[3,"GS_Ext"],3)`, Eq.7) emotional response compared to mild, whereas increases weak response relative risk by `r round(RR_GS[1,"GS_Ext"],3)` (Eq.5). Having a past MDD episode increases relative risk of having moderate (RRR= `r round(RR_GS[2,"CASEDM"],3)`, Eq.6) and strong(RRR= `r round(RR_GS[3,"CASEDM"],3)`,Eq.7) emotional response compared to mild, whereas increase weak emotional relative risk (RRR= `r round(RR_GS[1,"CASEDM"],3)`,Eq.1).
+
+In sum, an increase in Exteroceptive GSCORR gradually decreases the chance of a higher emotional response from weak to strong, whereas an increase in Interoceptive GSCORR increases the change of weak emotional reaction. In addition, past MDD episodes increase moderate and strong RRR while decreasing weak response probability. In the Global signal regressed model, only strong emotional responses related with a decrease in Exteroceptive GSCORR (Supplementary Figure, Figure 10). Thus, the former model explains GSCORR to behavioral relation better than the latter.
+
+```{r Change Multinomial Logistic Regression-Negative Reappraise,echo=FALSE,warning=FALSE,results='hide',message=FALSE}
+#| fig.cap= "Probability of emotional response according to GSCORR while reappraising to the negative stimuli. Increase in interoceptive GSCORR increases change of weak emotional response with increase in strong emotional response, marginally (p=0.07). Increase in exteroceptive GSCORR increases chance of strong emotional response gradually, from weak to strong."
+############Interoceptive#########
+IntPred<-data %>% select(CASE,GS_Int,GS_Ext,GS_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GS_Int), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GS_Int"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.001)","Mild \n(Reference)","Moderate","Strong \n(p=0.07*)")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pInt<-ggplot(lpp, aes(x = GS_Int, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "Negative Stimuli with reappraising")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+#############Exteroceptive########
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GS_Ext), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GS_Ext"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.01)","Mild \n(Reference)","Moderate \n(p<0.05)","Strong \n(p<0.001)")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GS_Ext, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+############Mental#######
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GS_Ment), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GS_Ment"), value.name = "probability")
+
+NAME<-c("Weak ","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pMent<-ggplot(lpp, aes(x = GS_Ment, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+
+pNeg<-ggarrange(pInt,pExt,pMent,ncol = 3,common.legend = TRUE,align = "h")
+
+ggsave(pNeg,filename = "pNeg_Reapp.png",
+         path="/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+```
+
+```{r Change GSR Multinomial Logistic Regression-Negative Reappraise,echo=FALSE,warning=FALSE,results='hide',message=FALSE}
+############Interoceptive#########
+IntPred<-data %>% select(CASE,GSR_Int,GSR_Ext,GSR_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GSR_Int), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GSR_Int"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.001)","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pInt<-ggplot(lpp, aes(x = GSR_Int, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+  labs(title = "GS REGRESSED",subtitle = "Negative Stimuli with reappraising")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+#############Exteroceptive########
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GSR_Ext), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GSR_Ext"), value.name = "probability")
+
+NAME<-c("Weak","Mild \n(Reference)","Moderate","Strong \n(p<0.05)")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GSR_Ext, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+############Mental#######
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GSR_Ment), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GSR_Ment"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.001) ","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pMent<-ggplot(lpp, aes(x = GSR_Ment, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+pNeg_Reapp_GSR<-ggarrange(pInt,pExt,pMent,ncol = 3,common.legend = TRUE,align = "h")
+
+ggsave(pNeg_Reapp_GSR,filename = "pNeg_Reapp_GSR.png",
+         path="/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+```
+
+### Neutral stimuli
+
+```{r ROC Multinomial Logistic Regression-Notr,echo=FALSE,message=FALSE,warning=FALSE,message=FALSE,results='hide',dev='png',fig.show='hide',eval=FALSE}
+
+#!NEUTRAL STIMULI WITHOUT CROSS VALIDATION. SENSTITIVE TO THE RANDOMIZING EFFECT.
+#THUS CROSS VALIDATION IS UTILIZED. 
+
+task1$response <-as.factor(task1$response)
+set.seed(222)
+ind<-sample(2,nrow(task1),
+            replace = TRUE,
+            prob=c(0.6,0.4))
+training<-task1[ind==1,]
+testing<-task1[ind==2,]
+
+training$response<-relevel(training$response,ref="1")
+
+###############+-+-+-+-+-Predicting with GS+-+-+-+-+-+-+-+-+-+-###########
+GSmodel<-multinom(response~GS_Int+GS_Ment+GS_Ext+group,data=training)
+
+z <- summary(GSmodel)$coefficients/summary(GSmodel)$standard.errors
+z
+
+psig_GS <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GS
+
+#ROC curve
+p<-predict(GSmodel,testing)
+
+#Gives accuracy. No Information Rate is when no model exist. Acc should be better
+# than that
+ConfMat_GS<-confusionMatrix(p,testing$response)
+#
+pp<-predict(GSmodel, newdata = testing, type = "probs", se = TRUE)
+#Roc Curves of probability
+r<-multiclass.roc(testing$response, pp, percent=T)
+# Responses compared with weak 
+r1<-r$rocs$`1/2`[[2]]
+r2<-r$rocs$`1/3`[[2]]
+r3<-r$rocs$`1/4`[[2]]
+
+plot.roc(r1,print.auc = TRUE,print.auc.x = 20,print.auc.y = 10,print.auc.pattern = sprintf("AUC: %0.3f", auc(r1)), col="red",cex.lab=1.5,print.auc.cex = 1.5)
+plot.roc(r2,print.auc = TRUE,print.auc.x = 20,print.auc.y = 20,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r2)), col="blue",print.auc.cex = 1.5)
+plot.roc(r3,print.auc = TRUE,print.auc.x = 20,print.auc.y = 30,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r3)), col="green",print.auc.cex = 1.5)
+title("Neutral-Global Signal Presented",line = 3)
+GS_ROC <- recordPlot() 
+## extract the coefficients from the model and exponentiate for relative risk
+RR_GS<-exp(coef(GSmodel))
+
+############_+_+_+__+_+Predicting with GSR####################
+GSRmodel<-multinom(response~GSR_Int+GSR_Ment+GSR_Ext+group,data=training)
+
+z <- summary(GSRmodel)$coefficients/summary(GSRmodel)$standard.errors
+z
+
+psig <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig
+
+#ROC curve
+p<-predict(GSRmodel,testing)
+
+#Gives accuracy. No Information Rate is when no model exist. Acc should be better
+# than that
+ConfMat_GSR<-confusionMatrix(p,testing$response)
+#
+pp<-predict(GSRmodel, newdata = testing, type = "probs", se = TRUE)
+#Roc Curves of probability
+r<-multiclass.roc(testing$response, pp, percent=T)
+# Responses compared with weak 
+r1<-r$rocs$`1/2`[[2]]
+r2<-r$rocs$`1/3`[[2]]
+r3<-r$rocs$`1/4`[[2]]
+
+plot.roc(r1,print.auc = TRUE,print.auc.x = 20,print.auc.y = 10,print.auc.pattern = sprintf("AUC: %0.3f", auc(r1)), col="red",cex.lab=1.5,print.auc.cex = 1.5)
+plot.roc(r2,print.auc = TRUE,print.auc.x = 20,print.auc.y = 20,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r2)), col="blue",print.auc.cex = 1.5)
+plot.roc(r3,print.auc = TRUE,print.auc.x = 20,print.auc.y = 30,add=T,print.auc.pattern = sprintf("AUC: %0.3f", auc(r3)), col="green",print.auc.cex = 1.5)
+title("Notr-Global Signal Regressed",line = 3)
+
+GSR_ROC <- recordPlot() 
+## extract the coefficients from the model and exponentiate for relative risk
+exp(coef(GSRmodel))
+```
+
+```{r,out.width="50%",echo=FALSE,eval=FALSE}
+
+par(mfrow=c(1,2)) 
+GS_ROC
+GSR_ROC
+par(mfrow=c(1,1))
+
+```
+
+```{r Neutral Comparing k-fold Cross Validation MNL and Random Forest,echo=FALSE,warning=FALSE,error=FALSE,results='hide'}
+#Here since cross validation we use we avoid randomizing of train/test splitting
+#https://remiller1450.github.io/s230f19/caret3.html
+#https://ashgreat.github.io/analyticsAppBook/multinomial-logistic-regression-mnl.html
+####
+task1$response <-as.factor(task1$response)
+data=task1
+data$group<-as.factor(data$group)
+data$CASE<-data$group
+data<-data %>% na.omit()
+#Names cannot start with numbers in R language
+data<-data %>% 
+  mutate(response = factor(response, 
+          labels = make.names(levels(response))))
+
+# Dividing is not neeeded with repeated CV 
+# set.seed(333)
+# ind<-sample(2,nrow(data),
+#             replace = TRUE,
+#             prob=c(0.6,0.4))
+# 
+# training<-data[ind==1,]
+# testing<-data[ind==2,]
+
+# trControl_mnl <- trainControl(method = "repeatedcv",
+#                               number = 10,
+#                               search = "grid",
+#                               classProbs = TRUE,
+#                               summaryFunction = multiClassSummary)
+# 
+tuneGrid_mnl <- expand.grid(decay = seq(0, 1, by = 0.1))
+
+tControl <- trainControl(
+  method = "repeatedcv", #cross validation
+  number = 10, #10 folds
+  repeats = 5,
+  search = "random" #auto hyperparameter selection
+)
+
+#training$response<-relevel(training$response,ref="X1")
+
+data$response<-relevel(data$response,ref="X1")
+
+# model_mnl <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#                           data = training,
+#                           method = "multinom",
+#                           maxit = 100,
+#                           trace = FALSE, # suppress iterations
+#                           tuneGrid = tuneGrid_mnl,
+#                           trControl = tControl
+#                           )
+# 
+# 
+# caret::confusionMatrix(predict(model_mnl, 
+#                                newdata = testing, 
+#                                type = "raw"),
+#                                reference = testing$response)
+
+
+set.seed(123)
+fit1.GS <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+set.seed(123)
+fit1.GSR <- caret::train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+
+# Random Forest 
+# set.seed(123)
+# fit2.GS <- train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# # 
+# # set.seed(123)
+# fit2.GSR <- train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# 
+
+# rs <- resamples(list(mlr_GS = fit1.GS,mlr_GSR=fit1.GSR,rf_GS= fit2.GS,rf_GSR=fit2.GSR))
+# summary(rs)
+
+ConfMat_GS<-caret::confusionMatrix(predict(fit1.GS, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GS)$coefficients/summary(fit1.GS)$standard.errors
+z
+
+psig_GS <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GS
+
+ConfMat_GSR<-caret::confusionMatrix(predict(fit1.GSR, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GSR)$coefficients/summary(fit1.GSR)$standard.errors
+z
+
+psig_GSR <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GSR
+
+tt<-summary(fit1.GS$finalModel)
+RR_GS<-exp(tt$coefficients)
+tt<-summary(fit1.GSR$finalModel)
+RR_GSR<-exp(tt$coefficients)
+
+ACC[3]<-round(unname(ConfMat_GS$overall[1]),3)
+ACC[6]<-round(unname(ConfMat_GSR$overall[1]),3)
+
+
+```
+
+The global signal correlation model has an accuracy of `r sprintf("%0.f%%",ConfMat_GS$overall["Accuracy"]*100)` with Binomial test is showing model is marginally significant (p-value=`r round(ConfMat_GS$overall["AccuracyPValue"],3)`) compared to null-hypothesis where no model exists. The global signal correlation model has an accuracy of `r sprintf("%0.f%%", ConfMat_GSR$overall["Accuracy"]*100)` with a non-significant model (p-value=`r round(ConfMat_GSR$overall["AccuracyPValue"],3)`). In other words, global signal regression worsens behavioral prediction from neuronal data. Mental and Exteroceptive level GSCORR related significantly to emotional severity response where none of the levels are related to the response when GS regressed (Supplementary figure 11).
+
+```{=tex}
+\begin{equation}
+\begin{aligned}
+ln(\frac{P(Response=mild)}{P(Response=weak)})= Intercept + `r round(summary(fit1.GS)$coefficients[1,"GS_Ment"],3)` \times GSCORR_{Mental} + \\
+(`r round(summary(fit1.GS)$coefficients[1,"GS_Ext"],3)`) \times GSCORR_{Exteroceptive} + \\
+`r round(summary(fit1.GS)$coefficients[1,"CASEDM"],3)` \times (group=DM)
+\end{aligned}
+\end{equation}
+```
+```{=tex}
+\begin{equation}
+\begin{aligned}
+ln(\frac{P(Response=moderate)}{P(Response=weak)})= Intercept + (`r round(summary(fit1.GS)$coefficients[2,"GS_Ext"],3)`) \times GSCORR_{Exteroceptive} + \\
+`r round(summary(fit1.GS)$coefficients[2,"CASEDM"],3)` \times (group=DM)
+\end{aligned}
+\end{equation}
+```
+In the global signal presented model one-unit increase in the Exteroceptive level GSCORR decreases the relative risk of having mild (`r round(RR_GS[1,"GS_Ext"],3)`) and moderate (`r round(RR_GS[2,"GS_Ext"],3)`) emotional response compared to weak. However, a one-unit increase in the Mental level GSCORR increased mild emotional response relative risk by `r round(RR_GS[1,"GS_Ment"],3)` compared to weak. However, increased Mental GSCORR increases weak emotional response probability and decreases mild emotional response probability, while the opposite for past MDD episode group. Having a past major depressive episode increases the relative risk of having mild (RRR= `r round(RR_GS[1,"CASEDM"],3)`) ,moderate(RRR= `r round(RR_GS[2,"CASEDM"],3)`) and strong(RRR= `r round(RR_GS[3,"CASEDM"],3)`) emotional response compared to weak, gradually.
+
+In sum, for attending the neutral stimuli, increased exteroceptive GSCORR was related to an increased probability of weak response in both groups. However, increased GSCORR in the mental layer increases weak response probability in the control group while increasing mild response in the past MDD episode group.
+
+```{r Change Multinomial Logistic Regression-Neutral,echo=FALSE,message=FALSE,warning=FALSE,message=FALSE,results='hide'}
+#| fig.cap= "Probability of emotional response according to GSCORR while attending to the neutral stimuli. Increase in exteroceptive GSCORR increases change of mild emotional response, whereas decreases weak emotional response. Increase in mental GSCORR decreases mild emotional response and increases weak emotional response in control group. However increase in mental GSCORR increases chance of mild emotional response and decreases weak emotional response in depression group."
+#Testing data from the data splitting
+GSPred<-data %>% select(CASE,GS_Ext,GS_Ment,GS_Int)
+
+######INTEROCEPTIVE##########
+pp.GSPred<-cbind(GSPred %>% select(CASE,GS_Int), predict(fit1.GS, newdata = GSPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GS_Int"), value.name = "probability")
+
+NAME<-c("Weak","Mild","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+
+pInt<-ggplot(lpp, aes(x = GS_Int, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  labs(subtitle = "Neutral Stimuli")+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+  
+
+
+
+########MENTAL########
+pp.GSPred<-cbind(GSPred %>% select(CASE,GS_Ment), predict(fit1.GS, newdata = GSPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GS_Ment"), value.name = "probability")
+
+NAME<-c("Weak \n(Reference)","Mild \n(p=.001)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+
+pMent<-ggplot(lpp, aes(x = GS_Ment, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  labs(subtitle = "Neutral Stimuli")+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+  
+
+# ann_text <- data.frame(Ment= c(0, 0, 0, 0),
+#   probability=c(0, 0, 0.12, 0),
+#   label = "Text",
+#   variable = factor("Moderate",levels = NAME))
+# 
+# dat_text <- data.frame(
+#   label = c("", "", "p=.01",""),
+#   variable = NAME,
+#   x     = c(0, 0, 0, 0),
+#   y     = c(0, 0, 0.12, 0)
+# )
+# 
+# pMent<-pMent + geom_text(
+#   data    = ann_text,
+#   mapping= aes(Ment,probability,label=label)
+# )
+# 
+# pMent<-pMent + annotate("text",
+#   x=0,y=0.12,
+#   label="test"
+# )
+#######EXTEROCEPTIVE############
+pp.GSPred<-cbind(GSPred %>% select(CASE,GS_Ext), predict(fit1.GS, newdata = GSPred, type = "prob", se = TRUE))
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GS_Ext"), value.name = "probability")
+
+NAME<-c("Weak \n(Reference)","Mild \n(p<.001)","Moderate \n(p<.05)","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GS_Ext, y = probability, colour = CASE)) + geom_smooth() + 
+  facet_grid(variable ~
+    ., scales = "free",labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "Neutral Stimuli")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+pNotr<-ggarrange(pInt,pExt,pMent,ncol = 3,common.legend = TRUE,align = "h")
+
+ggsave(pNotr,filename = "pNotr.png",
+         path="/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+pNotr
+
+
+```
+
+```{r GSR Change Multinomial Logistic Regression-Neutral,echo=FALSE,message=FALSE,warning=FALSE,message=FALSE,results='hide'}
+#Testing data from the data splitting
+GSPred<-data %>% select(CASE,GSR_Ext,GSR_Ment,GSR_Int)
+
+######INTEROCEPTIVE##########
+pp.GSPred<-cbind(GSPred %>% select(CASE,GSR_Int), predict(fit1.GSR, newdata = GSPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GSR_Int"), value.name = "probability")
+
+NAME<-c("Weak","Mild","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+
+pInt<-ggplot(lpp, aes(x = GSR_Int, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  labs(title = "GS REGRESSED",subtitle = "Neutral Stimuli")+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+  
+
+
+
+########MENTAL########
+pp.GSPred<-cbind(GSPred %>% select(CASE,GSR_Ment), predict(fit1.GSR, newdata = GSPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GSR_Ment"), value.name = "probability")
+
+NAME<-c("Weak \n(Reference)","Mild","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+
+pMent<-ggplot(lpp, aes(x = GSR_Ment, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  labs(subtitle = "Neutral Stimuli")+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold")
+    )
+  
+
+# ann_text <- data.frame(Ment= c(0, 0, 0, 0),
+#   probability=c(0, 0, 0.12, 0),
+#   label = "Text",
+#   variable = factor("Moderate",levels = NAME))
+# 
+# dat_text <- data.frame(
+#   label = c("", "", "p=.01",""),
+#   variable = NAME,
+#   x     = c(0, 0, 0, 0),
+#   y     = c(0, 0, 0.12, 0)
+# )
+# 
+# pMent<-pMent + geom_text(
+#   data    = ann_text,
+#   mapping= aes(Ment,probability,label=label)
+# )
+# 
+# pMent<-pMent + annotate("text",
+#   x=0,y=0.12,
+#   label="test"
+# )
+#######EXTEROCEPTIVE############
+pp.GSPred<-cbind(GSPred %>% select(CASE,GSR_Ext), predict(fit1.GSR, newdata = GSPred, type = "prob", se = TRUE))
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GSR_Ext"), value.name = "probability")
+
+NAME<-c("Weak \n(Reference)","Mild","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GSR_Ext, y = probability, colour = CASE)) + geom_smooth() + 
+  facet_grid(variable ~
+    ., scales = "free",labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "Neutral Stimuli")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+pNotr_GSR<-ggarrange(pInt,pExt,pMent,ncol = 3,common.legend = TRUE,align = "h")
+
+ggsave(pNotr_GSR,filename = "pNotr_GSR.png",
+         path="/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+
+```
+
+\newpage
+
+# SUPPLEMENTARY FIGURES
+
+```{r HAMD Scores,echo=FALSE,out.width="50%"}
+#| fig.cap="Comparison of group HAMD scores. Past depressive episode group has higher Hamilton Depression Rating Scale scores (M=11.070) than Control (M=1.385) group. "
+KEY<-data.frame(read.csv("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/Key.csv"))
+
+stat.test<- KEY %>% slice(1:34
+                         )%>%filter(HAMD<17
+                         )%>%t_test(HAMD~GROUP)
+
+stat.test_pos <- stat.test %>%
+  add_xy_position(x = "GROUP", dodge = 0.8)
+
+bxp<-ggplot(aes(x = GROUP,y=HAMD),data = KEY %>% slice(1:34
+                         )%>%filter(HAMD<17
+                         ))+geom_boxplot()
+
+bxp<-bxp + stat_pvalue_manual(
+  stat.test_pos,  label = "{p}", tip.length = 0,size=5,step.increase = 0.05
+)+theme_minimal()+theme(text=element_text(size=20))
+
+# BDI###
+# stat.test<-KEY %>% slice(1:34)%>%t_test(BECK~GROUP)
+# 
+# stat.test_pos <- stat.test %>%
+#   add_xy_position(x = "GROUP", dodge = 0.8)
+# 
+# bxp<-ggplot(aes(x = GROUP,y=BECK),data = KEY %>% slice(1:34
+#                          )%>%filter(HAMD<17
+#                          ))+geom_boxplot()+
+#   ylab("BDI")
+# 
+# bxp<-bxp + stat_pvalue_manual(
+#   stat.test_pos,  label = "{p}", tip.length = 0,size=5,step.increase = 0.05)
+# 
+bxp
+```
+
+```{r,out.width="70%",echo=FALSE}
+#| fig.cap=" GSCORR difference between groups after HAMD scores are included as covariate. After elimination of HAMD score 
+#| difference with ANCOVA, Estimated Marginal Means test (Emmeans test) is used as post-hoc test. p-values are corrected with
+#| Bonferoni-Holmes method. Interoceptive layer GSCORR is not statistically significant between groups. In exteroceptive layer 
+#| past MDD episodes group showed higher GSCORR (M=0.307,SE=0.049) than control (M=0.001,SE=0.056) group. In mental layer past
+#| MDD episodes group showed higher GSCORR (M=0.251,SE=0.049) than control group (M=0.021,SE=0.056) "
+EMMEANS
+
+EMMEANS_MED
+```
+
+```{r SUP Small Masks-Mother2Mother Level,echo=FALSE,message=FALSE,warning=FALSE,out.width="300px"}
+#Preparing Data
+load("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/DATA/GSR_TOPO_RESTRICETED_MOTHERS_SUBJ.Rdata")
+GS<-as.data.frame(t(Zrval[1:3,1:34]))
+colnames(GS)<-c("1-Int","2-Ext","3-Ment")
+GS$group<-as.factor(c(rep("dep",20),rep("cont",14)))
+GS$case<-as.factor(c(rep("dep",20),rep("cont",14)))
+id<-data.frame(id=c(1:nrow(GS)))
+GS<-GS %>% mutate(id)
+
+zz<-data.frame()
+index=c(1,2,3)
+for (i in c(1:34)) {
+  test<-as.matrix(GS[,1:3])
+  if (any(is.na(test[,index][i,]))) {
+    next
+  }
+  tt<-lm(as.array(test[,index][i,])~c(1:3))
+  zz[i,1]<-unname(tt$coefficients)[2]
+}
+colnames(zz)<-c("GS_Grad")
+GS<-GS %>% mutate(zz)
+
+
+GS<-GS%>% mutate(dif.1=GS$`2-Ext`-GS$`1-Int`
+)%>% mutate(dif.2=GS$`3-Ment`-GS$`2-Ext`
+)%>%mutate(dif.3=GS$`3-Ment`-GS$`1-Int`
+)%>%mutate(.data=data.frame(id=c(1:nrow(GS))))
+
+GS<-GS%>%dplyr::filter(
+  id %in% index_KEY
+)
+
+
+test_id <- GS %>%
+  gather(key = "level", value = "score","1-Int","2-Ext","3-Ment") %>%
+  convert_as_factor(id, group,level)
+
+stat.test <- test_id %>%
+  group_by(level) %>%
+  wilcox_test(score ~ group) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+LvlLabels=c("Int","Ext","Ment")
+
+bxp <- ggboxplot(
+  test_id, x = "level", y = "score",size=1.5,
+  color = "group")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+ #labs(title = "GS Presented",
+  #     subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))
+  theme(text=element_text(size=20),strip.text.x = element_text(
+    size = 12, face = "bold"
+  ),legend.position="top",legend.title = element_text(size=20),legend.text = element_text(size=20))+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_npg(labels=c("Control","Depression"))
+
+stat.test_GS <- stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GS_level_GroupDif<-bxp + stat_pvalue_manual(
+  stat.test_GS,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+```
+
+```{r SUP Small Masks-Mother2Mother Level-Topography,echo=FALSE,message=FALSE,warning=FALSE,out.width="300px"}
+#Preparing Data
+load("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/DATA/GSR_TOPO_RESTRICETED_MOTHERS_SUBJ.Rdata")
+GS<-as.data.frame(t(Zrval[1:3,1:34]))
+colnames(GS)<-c("1-Int","2-Ext","3-Ment")
+GS$group<-as.factor(c(rep("dep",20),rep("cont",14)))
+GS$case<-as.factor(c(rep("dep",20),rep("cont",14)))
+id<-data.frame(id=c(1:nrow(GS)))
+GS<-GS %>% mutate(id)
+
+zz<-data.frame()
+index=c(1,2,3)
+for (i in c(1:34)) {
+  test<-as.matrix(GS[,1:3])
+  if (any(is.na(test[,index][i,]))) {
+    next
+  }
+  tt<-lm(as.array(test[,index][i,])~c(1:3))
+  zz[i,1]<-unname(tt$coefficients)[2]
+}
+colnames(zz)<-c("GS_Grad")
+GS<-GS %>% mutate(zz)
+
+
+GS<-GS%>% mutate(dif.1=GS$`2-Ext`-GS$`1-Int`
+)%>% mutate(dif.2=GS$`3-Ment`-GS$`2-Ext`
+)%>%mutate(dif.3=GS$`3-Ment`-GS$`1-Int`
+)%>%mutate(.data=data.frame(id=c(1:nrow(GS))))
+
+GS<-GS%>%dplyr::filter(
+  id %in% index_KEY
+)
+
+test_id <- GS %>%
+  gather(key = "level", value = "score","1-Int","2-Ext","3-Ment") %>%
+  convert_as_factor(id, group,level)
+
+stat.test <- test_id %>%
+  group_by(group) %>%
+  wilcox_test(score ~ level) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+LvlLabels=c("Int","Ext","Ment")
+
+NAME<-c("Control","Depression")
+names(NAME)<-c("cont","dep")
+
+bxp<-ggplot(test_id, aes(x = level, y=score)) + 
+  geom_boxplot(aes(color=factor(case)),size=2) +
+  facet_grid2(
+    .~ group, scales="free_y", space="free_y",labeller = as_labeller(NAME),
+    strip = strip_themed(
+      background_x = list(element_rect(fill = "#4DBBD5FF"),
+                          element_rect(fill = "#E64B35FF")),
+                          text_x=element_text(face="bold"))
+    )+
+    theme_bw()+
+  theme(axis.text.x=element_text(size=20),
+    text=element_text(size=20),
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))
+
+stat.test_GS <- stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GS_level_IntraDif<-bxp + stat_pvalue_manual(
+  stat.test_GS,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+
+```
+
+```{r SUP Small Masks-Mother2Mother Difference Level,echo=FALSE,message=FALSE,warning=FALSE,out.width="300px"}
+test_id <- GS %>%
+  gather(key = "level", value = "score","dif.1","dif.2","dif.3") %>%
+  convert_as_factor(id, group,level)
+
+stat.test <- test_id %>%
+  group_by(level) %>%
+  wilcox_test(score ~ group) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+DifLabels=c("Ext-Int","Ment-Ext","Ment-Int")
+
+bxp <- ggboxplot(
+  test_id, x = "level", y = "score",size=1.5,
+  color = "group")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.5,1)+
+  #labs(title = "GS Presented",
+   #    subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))+
+  theme(strip.text.x = element_text(
+    size = 12, face = "bold"
+  ),legend.position="bottom")+
+  scale_x_discrete(labels=DifLabels)+
+  scale_color_npg(labels=c("Control","Depression"))
+
+
+stat.test_GS <- stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GS_LevelDif_group<-bxp + stat_pvalue_manual(
+  stat.test_GS,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+```
+
+```{r SUP Small Masks-Mother2Mother Difference Level-Topography,echo=FALSE,message=FALSE,warning=FALSE,out.width="300px"}
+test_id <- GS %>%
+  gather(key = "level", value = "score","dif.1","dif.2","dif.3") %>%
+  convert_as_factor(id, group,level)
+
+stat.test <- test_id %>%
+  group_by(group) %>%
+  wilcox_test(score ~ level) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+DifLabels=c("Ext-Int","Ment-Ext","Ment-Int")
+
+#Old figure without different color in facet labels. Different function needed
+# bxp <- ggboxplot(
+#   test_id, x = "level", y = "score",size=1.5,facet.by = "group")+
+#   ylab("GSCORR")+
+#   xlab("")+
+#   ylim(-0.3,1.5)+
+#   #labs(title = "GS Presented",
+#   #     subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))+
+#   theme(text=element_text(size=16),strip.text.x = element_text(
+#     size = 12, face = "bold"
+#   ),legend.position="none")+
+#   scale_x_discrete(labels=DifLabels)+
+#   scale_color_jama(labels=c("Ext-Int","Ment-Ext","Ment-Int"))
+
+NAME<-c("Control","Depression")
+names(NAME)<-c("cont","dep")
+
+bxp<-ggplot(test_id, aes(x = level, y=score)) + 
+  geom_boxplot(size=2) +
+  facet_grid2(
+    .~ group, scales="free_y", space="free_y",labeller = as_labeller(NAME),
+    strip = strip_themed(
+      background_x = list(element_rect(fill = "#E64B35FF"),
+                          element_rect(fill = "#4DBBD5FF")),
+                          text_x=element_text(face="bold"))
+    )+
+    theme_bw()+
+  theme(axis.text.x=element_text(size=16),
+    text=element_text(size=20),
+    element_line(colour = "black"),
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank())+
+  ylab("GSCORR")+
+  ylim(-0.3,1.5)+
+  xlab("")+
+  scale_x_discrete(labels=DifLabels)
+
+stat.test_GS <- stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GS_LevelDif_Intragroup<-bxp + stat_pvalue_manual(
+  stat.test_GS,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+
+```
+
+```{r SUP_1,message=FALSE,warning=FALSE,echo=FALSE,results='hide'}
+Sup_1<-ggarrange(GS_level_GroupDif,GS_level_IntraDif,nrow = 1,ncol = 2,labels = "AUTO",font.label = list(size=20))
+
+png(file="/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/Sup_1.png",
+    width=1080, height=540)
+annotate_figure(Sup_1,top=text_grob("Global Signal Regressed",face = "bold",size = 24))
+dev.off()
+```
+
+```{r SUP_1 Inserting Notr Bars,out.width = "100%",echo=FALSE}
+#| fig.cap="Layer comparison when global signal regressed. A) No significant difference in Self Layers between groups. B) Global Signal Topography has similar hierarchy between two groups (Ment=Ext>Int). Int=Interoceptive, Ext=Exteroceptive, Ment=Mental Layer  "
+include_graphics("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/Sup_1.png")
+```
+
+```{r NegReapprise,echo=FALSE,warning=FALSE,out.width="70%",eval=FALSE}
+ggsave(final_NegReappraise,filename = "final_NegReappraise.png",
+         path="/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 800,height = 800, dpi=72,units = c("px"))
+
+include_graphics("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/final_NegReappraise.png")
+```
+
+```{r Accuracy Table,echo=FALSE,fig.show='hide',eval=FALSE}
+library(gt)
+tab_1<-as.data.frame(ACC
+                     )%>%mutate(Task=rownames(ACC),.before="GS"
+                     )%>%gt(rowname_col = "row",groupname_col = "group"
+                     )%>%tab_spanner(label = "Accuracy",columns = c(GS,GSR)
+                     )%>%tab_footnote(footnote = "Significant models in Multinomial Logistic Regression",
+                                                                           locations = list(cells_body(columns = GS,rows = c(1:2)),
+                                                                                            cells_body(columns = GSR,rows = c(1:2)))
+                     )%>%tab_footnote(footnote = "Marginal significant model in Multinomial Logistic Regression",
+                                                    locations = cells_body(columns = GS,rows = 3)
+                     )%>%opt_footnote_marks("standard"
+                     )%>%gtsave("tab_1.png",path = "/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/")
+```
+
+```{r,out.width="70%",echo=FALSE,eval=FALSE}
+include_graphics("/media/kaan/HD-B1/EKT/GSCORR_RESEARCHPART/tab_1.png")
+```
+
+\newpage
+
+```{r,echo=FALSE}
+#| fig.cap="Negative stimuli while attending while GS is regressed. Only interoceptive layer GSCORR is related with model."
+pNeg_Att_GSR
+```
+
+```{r,echo=FALSE}
+#| fig.cap="Negative stimuli while reapprasing while GS is regressed. When compared to GS is not regressed, exteroceptive layer gradual relation from weak to strong is distrupted"
+pNeg_Reapp_GSR
+```
+
+```{r}
+
+```
+
+```{r,echo=FALSE}
+#| fig.cap="No significant relation is found between GSCORR and emotion response severity"
+pNotr_GSR
+```
+
+```{r}
+round(mean(DEPTAB$AGE,na.rm = TRUE),2) 
+round(sd(DEPTAB$AGE,na.rm = TRUE),2)
+
+round(mean(DEPTAB$EDUCATION,na.rm = TRUE),2) 
+round(sd(DEPTAB$EDUCATION,na.rm = TRUE),2)
+
+round(mean(DEPTAB$HAMD,na.rm = TRUE),2) 
+round(sd(DEPTAB$HAMD,na.rm = TRUE),2)
+
+round(mean(DEPTAB$MEDICATION,na.rm = TRUE),2) 
+round(sd(DEPTAB$MEDICATION,na.rm = TRUE),2)
+
+
+```
+
+```{r}
+round(mean(CONTAB$AGE,na.rm = TRUE),2) 
+round(sd(CONTAB$AGE,na.rm = TRUE),2)
+
+round(mean(CONTAB$EDUCATION,na.rm = TRUE),2) 
+round(sd(CONTAB$EDUCATION,na.rm = TRUE),2)
+
+round(mean(CONTAB$HAMD,na.rm = TRUE),2) 
+round(sd(CONTAB$HAMD,na.rm = TRUE),2)
+
+round(mean(CONTAB$MEDICATION,na.rm = TRUE),2) 
+round(sd(CONTAB$MEDICATION,na.rm = TRUE),2)
+
+t.test(DEPTAB$AGE,CONTAB$AGE)
+t.test(DEPTAB$EDUCATION,CONTAB$EDUCATION)
+t.test(DEPTAB$HAMD,CONTAB$HAMD)
+t.test(DEPTAB$MEDICATION,CONTAB$MEDICATION)
+
+```
+
+|            | DEP          | CTRL        | p Value |
+|------------|--------------|-------------|---------|
+| AGE        | 46.68 (3.97) | 48.5 (5.46) | p=.30   |
+| EDUCATION  | 9 (3.54)     | 7.11 (3.48) | p=.23   |
+| HAMD       | 12.35 (3.87) | 1.46 (1.89) | p\<.001 |
+| MEDICATION | 4.75 (3.57)  | 0.22 (0.67) | p=.001  |
+
+# BIBLIOGRAPHY
