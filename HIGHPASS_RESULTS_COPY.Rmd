@@ -1,0 +1,2300 @@
+---
+title: "Highpass_Control"
+author: "Kaan Keskin"
+date: "2022-12-18"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+
+```
+
+## GSCORR group comparison
+
+
+```{r}
+library(ggpubr);library(tidyverse);library(rstatix);library(reshape2);
+library(nnet);library(ggsci);library(knitr);library(pROC);library(caret);
+library(ggh4x);library(zoo);library(emmeans);library(ggpattern)
+```
+
+```{r Patients that included,echo=FALSE,message=FALSE,warning=FALSE}
+KEY<-data.frame(read.csv("G:/Drive'ım/GSCORR_RESEARCHPART/Key.csv"))
+
+test<-KEY %>% slice(1:34) %>% mutate(HAMD=na.approx(HAMD))
+index_KEY<-which(test$HAMD<17)
+
+```
+
+```{r loading data}
+############### loading data
+
+HAMD<-KEY %>% slice(1:34
+)%>% mutate(HAMD=na.approx(HAMD)
+)%>% mutate(MED=MEDICATION
+)%>%select(X,HAMD,MED)
+
+load(file = "G:/Drive'ım/Research/GSCORR_RESEARCHPART/DATA/RESTRICTED_GS_TOPO_ALL_SUBJ.Rdata")
+GS <- as.data.frame(t(Zrval[,1:34])
+      )%>% mutate(group=c(rep("DM",20),rep("CM",14))
+      #)%>% mutate(SUBREG=c(rep("INT",11),rep("EXT",15),rep("MENT",12))
+      )%>% mutate(id=c(1:34)
+      )%>% filter(id %in% index_KEY)
+colnames(GS)[1:3] <- c("1-Int","2-Ext","3-Ment")
+
+load(file = "G:/Drive'ım/Research/GSCORR_RESEARCHPART/DATA/GSR_TOPO_RESTRICETED_MOTHERS_SUBJ.Rdata")
+GSR <- as.data.frame(t(Zrval)
+      )%>% mutate(group=c(rep("DM",20),rep("CM",14))
+      #)%>% mutate(SUBREG=c(rep("INT",11),rep("EXT",15),rep("MENT",12))
+      )%>% mutate(id=c(1:34)
+      )%>% filter(id %in% index_KEY)
+colnames(GSR)[1:3] <- c("1-Int","2-Ext","3-Ment")
+
+load(file = "G:/Drive'ım/Research/GSCORR_RESEARCHPART/DATA/RESTRICTED_GS_TOPO_ALL_SUBJ_HIGHPASS.Rdata")
+GS_HP <- as.data.frame(t(Zrval)
+      )%>% mutate(group=c(rep("DM",20),rep("CM",14))
+      #)%>% mutate(SUBREG=c(rep("INT",11),rep("EXT",15),rep("MENT",12))
+      )%>% mutate(id=c(1:34)
+      )%>% filter(id %in% index_KEY)
+colnames(GS_HP)[1:3] <- c("1-Int","2-Ext","3-Ment")
+load(file = "G:/Drive'ım/Research/GSCORR_RESEARCHPART/DATA/RESTRICTED_GSR_TOPO_ALL_SUBJ_HIGHPASS.Rdata")
+
+GSR_HP <- as.data.frame(t(Zrval)
+      )%>% mutate(group=c(rep("DM",20),rep("CM",14))
+      #)%>% mutate(SUBREG=c(rep("INT",11),rep("EXT",15),rep("MENT",12))
+      )%>% mutate(id=c(1:34)
+      )%>% filter(id %in% index_KEY)
+colnames(GSR_HP)[1:3] <- c("1-Int","2-Ext","3-Ment")
+```
+
+```{r GLobal Signal Layer comparison}
+#Preparing Data
+
+test_id <- GS_HP %>%
+  gather(key = "level", value = "score","1-Int","2-Ext","3-Ment") %>%
+  convert_as_factor(id, group,level)
+
+test_id<-test_id %>% filter (id %in% index_KEY)
+
+A_stat.test <- test_id %>%
+  group_by(level) %>%
+  rstatix::wilcox_test(score ~ group) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+A_EFF_SIZE<- test_id %>%
+  group_by(level) %>%
+  wilcox_effsize(score ~ group)
+
+
+LvlLabels=c("Int","Ext","Ment")
+
+my_colors<-c("#E64B35FF","#4DBBD5FF")
+
+bxp <- ggboxplot(
+  test_id, x = "level", y = "score",size=1.5,
+  color = "group")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+ #labs(title = "GS Presented",
+  #     subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))
+  theme(text=element_text(size=20),strip.text.x = element_text(
+    size = 12, face = "bold"
+  ),legend.position="top",legend.title = element_text(size=20),legend.text = element_text(size=20))+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))
+
+stat.test_GS <- A_stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GS_level_GroupDif<-bxp + stat_pvalue_manual(
+  stat.test_GS,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+
+B_stat.test <- test_id %>%
+  group_by(group) %>%
+  rstatix::wilcox_test(score ~ level) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+B_EFF_SIZE<- test_id %>%
+  group_by(level) %>%
+  wilcox_effsize(score ~ group)
+
+NAME<-c("Control","Depression")
+names(NAME)<-c("CM","DM")
+
+bxp<-ggplot(test_id, aes(x = level, y=score)) + 
+  geom_boxplot(aes(color=factor(group)),size=2) +
+  facet_grid2(
+    .~ group, scales="free_y", space="free_y",labeller = as_labeller(NAME),
+    strip = strip_themed(
+      background_x = list(element_rect(fill = "#4DBBD5FF"),
+                          element_rect(fill = "#E64B35FF")),
+                          text_x=element_text(face="bold"))
+    )+
+    theme_bw()+
+  theme(axis.text.x=element_text(size=20),
+    text=element_text(size=20),
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "none")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))
+
+stat.test_GS <- B_stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+
+GS_level_IntraDif<-bxp + stat_pvalue_manual(
+  stat.test_GS,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+figure_2<-ggarrange(GS_level_GroupDif,GS_level_IntraDif,nrow = 1,ncol = 2,labels = "AUTO",font.label = list(size=20))
+png(file="G:/Drive'ım/Research/GSCORR_RESEARCHPART/Figure_2_highpass.png",
+    width=1080, height=540)
+annotate_figure(figure_2,top=text_grob("Global Signal Presented with only high pass ",face = "bold",size = 24))
+dev.off()
+```
+
+```{r,out.width=9}
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/Figure_2_highpass.png")
+```
+
+```{r GLobal Signal Regressed Layer comparison}
+#Preparing Data
+
+test_id <- GSR_HP %>%
+  gather(key = "level", value = "score","1-Int","2-Ext","3-Ment") %>%
+  convert_as_factor(id, group,level)
+
+test_id<-test_id %>% filter (id %in% index_KEY)
+
+A_stat.test <- test_id %>%
+  group_by(level) %>%
+  rstatix::wilcox_test(score ~ group) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+A_EFF_SIZE<- test_id %>%
+  group_by(level) %>%
+  wilcox_effsize(score ~ group)
+
+
+LvlLabels=c("Int","Ext","Ment")
+
+my_colors<-c("#E64B35FF","#4DBBD5FF")
+
+bxp <- ggboxplot(
+  test_id, x = "level", y = "score",size=1.5,
+  color = "group")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+ #labs(title = "GS Presented",
+  #     subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))
+  theme(text=element_text(size=20),strip.text.x = element_text(
+    size = 12, face = "bold"
+  ),legend.position="top",legend.title = element_text(size=20),legend.text = element_text(size=20))+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))
+
+stat.test_GSR <- A_stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GSR_level_GroupDif<-bxp + stat_pvalue_manual(
+  stat.test_GSR,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+
+B_stat.test <- test_id %>%
+  group_by(group) %>%
+  rstatix::wilcox_test(score ~ level) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+B_EFF_SIZE<- test_id %>%
+  group_by(level) %>%
+  wilcox_effsize(score ~ group)
+
+NAME<-c("Control","Depression")
+names(NAME)<-c("CM","DM")
+
+bxp<-ggplot(test_id, aes(x = level, y=score)) + 
+  geom_boxplot(aes(color=factor(group)),size=2) +
+  facet_grid2(
+    .~ group, scales="free_y", space="free_y",labeller = as_labeller(NAME),
+    strip = strip_themed(
+      background_x = list(element_rect(fill = "#4DBBD5FF"),
+                          element_rect(fill = "#E64B35FF")),
+                          text_x=element_text(face="bold"))
+    )+
+    theme_bw()+
+  theme(axis.text.x=element_text(size=20),
+    text=element_text(size=20),
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "none")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))
+
+stat.test_GSR <- B_stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+
+GSR_level_IntraDif<-bxp + stat_pvalue_manual(
+  stat.test_GSR,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+figure_2_App<-ggarrange(GSR_level_GroupDif,GSR_level_IntraDif,nrow = 1,ncol = 2,labels = "AUTO",font.label = list(size=20))
+png(file="G:/Drive'ım/Research/GSCORR_RESEARCHPART/Figure_2_App_highpass.png",
+    width=1080, height=540)
+annotate_figure(figure_2_App,top=text_grob("Global Signal Regressed with only high pass ",face = "bold",size = 24))
+dev.off()
+```
+
+```{r,out.width="100%"}
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/Figure_2_App_highpass.png")
+```
+
+
+```{r GLobal Signal Presented Bandpass Layer comparison}
+#Reload is needed
+
+load(file = "G:/Drive'ım/Research/GSCORR_RESEARCHPART/DATA/RESTRICTED_GS_TOPO_ALL_SUBJ.Rdata")
+GS <- as.data.frame(t(Zrval[,1:34])
+      )%>% mutate(group=c(rep("DM",20),rep("CM",14))
+      #)%>% mutate(SUBREG=c(rep("INT",11),rep("EXT",15),rep("MENT",12))
+      )%>% mutate(id=c(1:34)
+      )%>% filter(id %in% index_KEY)
+colnames(GS)[1:3] <- c("1-Int","2-Ext","3-Ment")
+
+#Preparing Data
+test_id <- GS %>%
+  gather(key = "level", value = "score","1-Int","2-Ext","3-Ment") %>%
+  convert_as_factor(id, group,level)
+
+test_id<-test_id %>% filter (id %in% index_KEY)
+
+A_stat.test <- test_id %>%
+  group_by(level) %>%
+  rstatix::wilcox_test(score ~ group) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+A_EFF_SIZE<- test_id %>%
+  group_by(level) %>%
+  wilcox_effsize(score ~ group)
+
+
+LvlLabels=c("Int","Ext","Ment")
+
+my_colors<-c("#E64B35FF","#4DBBD5FF")
+
+bxp <- ggboxplot(
+  test_id, x = "level", y = "score",size=1.5,
+  color = "group")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+ #labs(title = "GS Presented",
+  #     subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))
+  theme(text=element_text(size=20),strip.text.x = element_text(
+    size = 12, face = "bold"
+  ),legend.position="top",legend.title = element_text(size=20),legend.text = element_text(size=20))+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))
+
+stat.test_GSR <- A_stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GSR_level_GroupDif<-bxp + stat_pvalue_manual(
+  stat.test_GSR,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+
+B_stat.test <- test_id %>%
+  group_by(group) %>%
+  rstatix::wilcox_test(score ~ level) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+B_EFF_SIZE<- test_id %>%
+  group_by(level) %>%
+  wilcox_effsize(score ~ group)
+
+NAME<-c("Control","Depression")
+names(NAME)<-c("CM","DM")
+
+bxp<-ggplot(test_id, aes(x = level, y=score)) + 
+  geom_boxplot(aes(color=factor(group)),size=2) +
+  facet_grid2(
+    .~ group, scales="free_y", space="free_y",labeller = as_labeller(NAME),
+    strip = strip_themed(
+      background_x = list(element_rect(fill = "#4DBBD5FF"),
+                          element_rect(fill = "#E64B35FF")),
+                          text_x=element_text(face="bold"))
+    )+
+    theme_bw()+
+  theme(axis.text.x=element_text(size=20),
+    text=element_text(size=20),
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "none")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))
+
+stat.test_GSR <- B_stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+
+GSR_level_IntraDif<-bxp + stat_pvalue_manual(
+  stat.test_GSR,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+figure_2_App<-ggarrange(GSR_level_GroupDif,GSR_level_IntraDif,nrow = 1,ncol = 2,labels = "AUTO",font.label = list(size=20))
+
+# png(file="G:/Drive'ım/Research/GSCORR_RESEARCHPART/Figure_2_GS.png",
+#     width=1080, height=540)
+# annotate_figure(figure_2_App,top=text_grob("Global Signal Presented with bandpass ",face = "bold",size = 24))
+# dev.off()
+
+figure_2_App<-annotate_figure(figure_2_App,
+                              top=text_grob("Global Signal Presented with bandpass ",face = "bold",size = 24))
+
+ggsave(figure_2_App,filename = "Figure_2_GS.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/Figure_2_GS.png")
+
+```
+
+
+```{r,out.width="100%"}
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/Figure_2_GS.png")
+```
+```{r GLobal Signal Regressed Bandpass Layer comparison}
+#Reload is needed
+
+load(file = "G:/Drive'ım/Research/GSCORR_RESEARCHPART/DATA/GSR_TOPO_RESTRICETED_MOTHERS_SUBJ.Rdata")
+GSR <- as.data.frame(t(Zrval)
+      )%>% mutate(group=c(rep("DM",20),rep("CM",14))
+      #)%>% mutate(SUBREG=c(rep("INT",11),rep("EXT",15),rep("MENT",12))
+      )%>% mutate(id=c(1:34)
+      )%>% filter(id %in% index_KEY)
+colnames(GSR)[1:3] <- c("1-Int","2-Ext","3-Ment")
+
+#Preparing Data
+test_id <- GSR %>%
+  gather(key = "level", value = "score","1-Int","2-Ext","3-Ment") %>%
+  convert_as_factor(id, group,level)
+
+test_id<-test_id %>% filter (id %in% index_KEY)
+
+#Summary Statics
+test_id%>%group_by(group,level)%>%get_summary_stats(show=c("median","se"))
+
+A_stat.test <- test_id %>%
+  group_by(level) %>%
+  rstatix::wilcox_test(score ~ group) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+A_EFF_SIZE<- test_id %>%
+  group_by(level) %>%
+  wilcox_effsize(score ~ group)
+
+
+LvlLabels=c("Int","Ext","Ment")
+
+my_colors<-c("#E64B35FF","#4DBBD5FF")
+
+bxp <- ggboxplot(
+  test_id, x = "level", y = "score",size=1.5,
+  color = "group")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+ #labs(title = "GS Presented",
+  #     subtitle = paste("Certain ROIs are used. 20 vs 14 subject",sep=""))
+  theme(text=element_text(size=20),strip.text.x = element_text(
+    size = 12, face = "bold"
+  ),legend.position="top",legend.title = element_text(size=20),legend.text = element_text(size=20))+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))
+
+stat.test_GSR <- A_stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+GSR_level_GroupDif<-bxp + stat_pvalue_manual(
+  stat.test_GSR,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+
+B_stat.test <- test_id %>%
+  group_by(group) %>%
+  rstatix::wilcox_test(score ~ level) %>%
+  adjust_pvalue(method = "bonferroni") %>%
+  add_significance("p.adj")
+
+B_EFF_SIZE<- test_id %>%
+  group_by(level) %>%
+  wilcox_effsize(score ~ group)
+
+NAME<-c("Control","Depression")
+names(NAME)<-c("CM","DM")
+
+bxp<-ggplot(test_id, aes(x = level, y=score)) + 
+  geom_boxplot(aes(color=factor(group)),size=2) +
+  facet_grid2(
+    .~ group, scales="free_y", space="free_y",labeller = as_labeller(NAME),
+    strip = strip_themed(
+      background_x = list(element_rect(fill = "#4DBBD5FF"),
+                          element_rect(fill = "#E64B35FF")),
+                          text_x=element_text(face="bold"))
+    )+
+    theme_bw()+
+  theme(axis.text.x=element_text(size=20),
+    text=element_text(size=20),
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "none")+
+  ylab("GSCORR")+
+  xlab("")+
+  ylim(-0.3,1.5)+
+  scale_x_discrete(labels=LvlLabels)+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))
+
+stat.test_GSR <- B_stat.test %>%
+  add_xy_position(x = "level", dodge = 0.8)
+
+
+
+GSR_level_IntraDif<-bxp + stat_pvalue_manual(
+  stat.test_GSR,  label = "{p.adj.signif}", tip.length = 0,size=10,step.increase = 0.05
+)
+
+figure_2_App<-ggarrange(GSR_level_GroupDif,GSR_level_IntraDif,nrow = 1,ncol = 2,labels = "AUTO",font.label = list(size=20))
+
+# png(file="G:/Drive'ım/Research/GSCORR_RESEARCHPART/Figure_2_GS.png",
+#     width=1080, height=540)
+# annotate_figure(figure_2_App,top=text_grob("Global Signal Presented with bandpass ",face = "bold",size = 24))
+# dev.off()
+
+figure_2_App<-annotate_figure(figure_2_App,
+                              top=text_grob("Global Signal Regressed with bandpass ",face = "bold",size = 24))
+
+ggsave(figure_2_App,filename = "Figure_2_GSR.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/Figure_2_GSR.png")
+
+```
+
+
+# Emmeans Tests
+```{r Effect of HAMD and BDI scores on Group difference with GS_HP,echo=FALSE,out.width="70%",results='hide',message=FALSE}
+
+HAMD<-KEY %>% slice(1:34
+              )%>% mutate(HAMD=na.approx(HAMD)
+              )%>% mutate(MED=MEDICATION
+              )%>% select(X,HAMD,MED
+              )%>% filter(X %in% index_KEY)
+
+test<-GS_HP%>%select(id,`1-Int`,`2-Ext`,`3-Ment`)
+MED=rep(HAMD$MED,3)
+
+test<-melt(id.vars="id",data=test
+           )%>%mutate(HAMD=rep(HAMD$HAMD,3)
+           )%>%mutate(MED
+           )%>%mutate(CASE=rep(GS$group,3))
+
+test<-test %>% filter (id %in% index_KEY)
+colnames(test)[2]<-"LEVEL"
+
+
+res.aov <- test %>% group_by(LEVEL) %>%
+anova_test(value ~ HAMD + CASE)
+
+
+get_anova_table(res.aov)
+
+
+library(emmeans)
+
+
+pwc <- test %>% 
+  group_by(LEVEL) %>%
+  emmeans_test(
+    value ~ CASE, covariate = HAMD,
+    p.adjust.method = "bonferroni"
+    ) %>% adjust_pvalue(method = "bonferroni"
+    ) %>% add_significance("p.adj")
+
+pwc
+
+pwc <- pwc %>% add_xy_position(comparisons = list(c("group1", "group2")), fun = "mean_se")
+
+NAME<-c("Interoceptive","Exteroceptive","Mental")
+names(NAME)<-c("1-Int","2-Ext","3-Ment")
+
+EMMEANS<-ggline(get_emmeans(pwc),
+       x = "CASE", 
+       y = "emmean",
+       facet.by = "LEVEL",
+       panel.labs = list(LEVEL=NAME),size = 2)+
+  scale_x_discrete(labels=c("Control","Depression"))+
+  xlab("")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high,colour=factor(CASE)),width = 0.2,size=3) + 
+  stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE,size=8) +
+  labs(caption = get_pwc_label(pwc),
+       title = "Global Signal Presented - Only Highpass Filter",
+       subtitle = "HADM as covariate")+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))+
+  theme(legend.position = "none",text=element_text(size=12),
+        axis.text=element_text(size=12,face="bold"))
+
+EMMEANS
+
+ggsave(EMMEANS,filename = "emmeans_GS_highpass.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/emmeans_GS_highpass.png")
+
+# When medication included as covarite for subjects with avaible information
+test<-test %>% na.omit()
+
+library(emmeans)
+pwc <- test %>% 
+  group_by(LEVEL) %>%
+  emmeans_test(
+    value ~ CASE, covariate = c("HAMD","MED"),
+    p.adjust.method = "bonferroni"
+    ) %>% adjust_pvalue(method = "bonferroni"
+    ) %>% add_significance("p.adj")
+pwc
+
+pwc <- pwc %>% add_xy_position(comparisons = list(c("group1", "group2")), fun = "mean_se")
+
+NAME<-c("Interoceptive","Exteroceptive","Mental")
+names(NAME)<-c("1-Int","2-Ext","3-Ment")
+
+EMMEANS_MED<-ggline(get_emmeans(pwc),
+       x = "CASE", 
+       y = "emmean",
+       facet.by = "LEVEL",
+       panel.labs = list(LEVEL=NAME),size = 2)+
+  scale_x_discrete(labels=c("Control","Depression"))+
+  xlab("")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high,colour=factor(CASE)),width = 0.2,size=3) + 
+  stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE,size=8) +
+  labs(caption = get_pwc_label(pwc))+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))+
+  theme(legend.position = "none",text=element_text(size=12),
+        axis.text=element_text(size=7,face="bold"))
+
+
+```
+
+```{r Effect of HAMD and BDI scores on Group difference with GS,echo=FALSE,out.width="70%",results='hide',message=FALSE}
+
+HAMD<-KEY %>% slice(1:34
+              )%>% mutate(HAMD=na.approx(HAMD)
+              )%>% mutate(MED=MEDICATION
+              )%>%select(X,HAMD,MED
+              )%>% filter(X %in% index_KEY)
+
+test<-GS%>%select(id,`1-Int`,`2-Ext`,`3-Ment`)
+MED=rep(HAMD$MED,3)
+
+test<-melt(id.vars="id",data=test
+           )%>%mutate(HAMD=rep(HAMD$HAMD,3)
+           )%>%mutate(MED
+           )%>%mutate(CASE=rep(GS$group,3))
+
+test<-test %>% filter (id %in% index_KEY)
+colnames(test)[2]<-"LEVEL"
+
+
+res.aov <- test %>% group_by(LEVEL) %>%
+anova_test(value ~ HAMD + CASE)
+
+
+get_anova_table(res.aov)
+
+
+library(emmeans)
+
+test %>% group_by(LEVEL)%>%
+get_summary_stats(show = c("mean","se"))
+
+pwc <- test %>% 
+  group_by(LEVEL) %>%
+  emmeans_test(
+    value ~ CASE, covariate = HAMD,
+    p.adjust.method = "bonferroni"
+    ) %>% adjust_pvalue(method = "bonferroni"
+    ) %>% add_significance("p.adj")
+
+pwc
+
+pwc <- pwc %>% add_xy_position(comparisons = list(c("group1", "group2")), fun = "mean_se")
+
+NAME<-c("Interoceptive","Exteroceptive","Mental")
+names(NAME)<-c("1-Int","2-Ext","3-Ment")
+
+EMMEANS<-ggline(get_emmeans(pwc),
+       x = "CASE", 
+       y = "emmean",
+       facet.by = "LEVEL",
+       panel.labs = list(LEVEL=NAME),size = 2)+
+  scale_x_discrete(labels=c("Control","Depression"))+
+  xlab("")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high,colour=factor(CASE)),width = 0.2,size=3) + 
+  stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE,size=8) +
+  labs(caption = get_pwc_label(pwc),
+       title = "Global Signal Presented - Bandpassed",
+       subtitle = "HAMD as covariate")+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))+
+  theme(legend.position = "none",text=element_text(size=12),
+        axis.text=element_text(size=7,face="bold"))
+
+EMMEANS
+
+# When medication included as covarite for subjects with avaible information
+test<-test %>% na.omit()
+
+library(emmeans)
+pwc <- test %>% 
+  group_by(LEVEL) %>%
+  emmeans_test(
+    value ~ CASE, covariate = c("HAMD","MED"),
+    p.adjust.method = "bonferroni"
+    ) %>% adjust_pvalue(method = "bonferroni"
+    ) %>% add_significance("p.adj")
+pwc
+
+pwc <- pwc %>% add_xy_position(comparisons = list(c("group1", "group2")), fun = "mean_se")
+
+NAME<-c("Interoceptive","Exteroceptive","Mental")
+names(NAME)<-c("1-Int","2-Ext","3-Ment")
+
+EMMEANS_MED<-ggline(get_emmeans(pwc),
+       x = "CASE", 
+       y = "emmean",
+       facet.by = "LEVEL",
+       panel.labs = list(LEVEL=NAME),size = 2)+
+  scale_x_discrete(labels=c("Control","Depression"))+
+  xlab("")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high,colour=factor(CASE)),width = 0.2,size=3) + 
+  stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE,size=8) +
+  labs(caption = get_pwc_label(pwc),
+       subtitle = "HAMD and MED as covariate")+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))+
+  theme(legend.position = "none",text=element_text(size=12),
+        axis.text=element_text(size=7,face="bold"))
+
+
+COMM <- ggarrange(EMMEANS,EMMEANS_MED,ncol = 1,common.legend = TRUE,align = "h")
+ggsave(COMM,filename = "COMM_GS.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/COMM_GS.png")
+
+```
+
+```{r Effect of HAMD and BDI scores on Group difference without GS Highpass,echo=FALSE,out.width="70%",results='hide',message=FALSE}
+
+test<-GSR_HP%>%select(id,`1-Int`,`2-Ext`,`3-Ment`)
+MED=rep(HAMD$MED,3)
+
+test<-melt(id.vars="id",data=test
+           )%>%mutate(HAMD=rep(HAMD$HAMD,3)
+           )%>%mutate(MED
+           )%>%mutate(CASE=rep(GSR$group,3))
+
+test<-test %>% filter (id %in% index_KEY)
+colnames(test)[2]<-"LEVEL"
+
+
+res.aov <- test %>% group_by(LEVEL) %>%
+anova_test(value ~ HAMD + CASE)
+
+
+get_anova_table(res.aov)
+
+
+library(emmeans)
+pwc_GSR <- test %>% 
+  group_by(LEVEL) %>%
+  emmeans_test(
+    value ~ CASE, covariate = HAMD,
+    p.adjust.method = "bonferroni"
+    ) %>% adjust_pvalue(method = "bonferroni"
+    ) %>% add_significance("p.adj")
+
+pwc_GSR
+
+pwc_GSR <- pwc_GSR %>% add_xy_position(comparisons = list(c("group1", "group2")), fun = "mean_se")
+
+NAME<-c("Interoceptive","Exteroceptive","Mental")
+names(NAME)<-c("1-Int","2-Ext","3-Ment")
+
+EMMEANS_GSR<-ggline(get_emmeans(pwc_GSR),
+       x = "CASE", 
+       y = "emmean",
+       facet.by = "LEVEL",
+       panel.labs = list(LEVEL=NAME),size = 2)+
+  scale_x_discrete(labels=c("Control","Depression"))+
+  xlab("")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high,colour=factor(CASE)),width = 0.2,size=3) + 
+  stat_pvalue_manual(pwc_GSR, hide.ns = FALSE, tip.length = FALSE,size=8) +
+  labs(caption = get_pwc_label(pwc_GSR),
+       title = "Global Signal Regressed - Highpassed",
+       subtitle = "HAMD as covariate")+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))+
+  theme(legend.position = "none",text=element_text(size=12),
+        axis.text=element_text(size=12,face="bold"))
+
+EMMEANS_GSR
+
+ggsave(EMMEANS_GSR,filename = "emmeans_GSR_highpass.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/emmeans_GSR_highpass.png")
+
+
+# When medication included as covarite for subjects with avaible information
+test<-test %>% na.omit()
+
+library(emmeans)
+pwc <- test %>% 
+  group_by(LEVEL) %>%
+  emmeans_test(
+    value ~ CASE, covariate = c("HAMD","MED"),
+    p.adjust.method = "bonferroni"
+    ) %>% adjust_pvalue(method = "bonferroni"
+    ) %>% add_significance("p.adj")
+pwc
+
+pwc <- pwc %>% add_xy_position(comparisons = list(c("group1", "group2")), fun = "mean_se")
+
+NAME<-c("Interoceptive","Exteroceptive","Mental")
+names(NAME)<-c("1-Int","2-Ext","3-Ment")
+
+EMMEANS_MED<-ggline(get_emmeans(pwc),
+       x = "CASE", 
+       y = "emmean",
+       facet.by = "LEVEL",
+       panel.labs = list(LEVEL=NAME),size = 2)+
+  scale_x_discrete(labels=c("Control","Depression"))+
+  xlab("")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high,colour=factor(CASE)),width = 0.2,size=3) + 
+  stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE,size=8) +
+  labs(caption = get_pwc_label(pwc))+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))+
+  theme(legend.position = "none",text=element_text(size=12),
+        axis.text=element_text(size=7,face="bold"))
+
+
+```
+
+
+```{r Effect of HAMD and BDI scores on Group difference without GS Bandpass,echo=FALSE,out.width="70%",results='hide',message=FALSE}
+
+test<-GSR%>%select(id,`1-Int`,`2-Ext`,`3-Ment`)
+MED=rep(HAMD$MED,3)
+
+test<-melt(id.vars="id",data=test
+           )%>%mutate(HAMD=rep(HAMD$HAMD,3)
+           )%>%mutate(MED
+           )%>%mutate(CASE=rep(GSR$group,3))
+
+test<-test %>% filter (id %in% index_KEY)
+colnames(test)[2]<-"LEVEL"
+
+
+res.aov <- test %>% group_by(LEVEL) %>%
+anova_test(value ~ HAMD + CASE)
+
+
+get_anova_table(res.aov)
+
+
+library(emmeans)
+pwc_GSR <- test %>% 
+  group_by(LEVEL) %>%
+  emmeans_test(
+    value ~ CASE, covariate = HAMD,
+    p.adjust.method = "bonferroni"
+    ) %>% adjust_pvalue(method = "bonferroni"
+    ) %>% add_significance("p.adj")
+
+pwc_GSR
+
+pwc_GSR <- pwc_GSR %>% add_xy_position(comparisons = list(c("group1", "group2")), fun = "mean_se")
+
+NAME<-c("Interoceptive","Exteroceptive","Mental")
+names(NAME)<-c("1-Int","2-Ext","3-Ment")
+
+EMMEANS_GSR<-ggline(get_emmeans(pwc_GSR),
+       x = "CASE", 
+       y = "emmean",
+       facet.by = "LEVEL",
+       panel.labs = list(LEVEL=NAME),size = 2)+
+  scale_x_discrete(labels=c("Control","Depression"))+
+  xlab("")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high,colour=factor(CASE)),width = 0.2,size=3) + 
+  stat_pvalue_manual(pwc_GSR, hide.ns = FALSE, tip.length = FALSE,size=8) +
+  labs(caption = get_pwc_label(pwc_GSR),
+       title = "Global Signal Regressed - Bandpassed",
+       subtitle = "HAMD as covariate")+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))+
+  theme(legend.position = "none",text=element_text(size=12),
+        axis.text=element_text(size=12,face="bold"))
+
+EMMEANS_GSR
+
+ggsave(EMMEANS_GSR,filename = "emmeans_GSR.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/emmeans_GSR.png")
+
+# When medication included as covarite for subjects with avaible information
+test<-test %>% na.omit()
+
+library(emmeans)
+pwc <- test %>% 
+  group_by(LEVEL) %>%
+  emmeans_test(
+    value ~ CASE, covariate = c("HAMD","MED"),
+    p.adjust.method = "bonferroni"
+    ) %>% adjust_pvalue(method = "bonferroni"
+    ) %>% add_significance("p.adj")
+pwc
+
+pwc <- pwc %>% add_xy_position(comparisons = list(c("group1", "group2")), fun = "mean_se")
+
+NAME<-c("Interoceptive","Exteroceptive","Mental")
+names(NAME)<-c("1-Int","2-Ext","3-Ment")
+
+EMMEANS_MED<-ggline(get_emmeans(pwc),
+       x = "CASE", 
+       y = "emmean",
+       facet.by = "LEVEL",
+       panel.labs = list(LEVEL=NAME),size = 2)+
+  scale_x_discrete(labels=c("Control","Depression"))+
+  xlab("")+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high,colour=factor(CASE)),width = 0.2,size=3) + 
+  stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE,size=8) +
+  labs(caption = get_pwc_label(pwc))+
+  scale_color_manual(values =c("#4DBBD5FF","#E64B35FF"))+
+  theme(legend.position = "none",text=element_text(size=12),
+        axis.text=element_text(size=7,face="bold"))
+
+
+```
+# Histogram for GSCORR's
+
+```{r Histogram for local vs global highpass,out.width="100%"}
+
+GS_HP<-GS_HP %>%mutate(TYPE=rep(c("GS")))
+GSR_HP<- GSR_HP %>% mutate(TYPE=rep(c("GSR")))
+
+test<-GS_HP %>% bind_rows(GSR_HP) 
+
+test_id <- test %>%
+  gather(key = "level", value = "score","1-Int","2-Ext","3-Ment") %>%
+  convert_as_factor(id, group,level,TYPE)
+
+# ANOVA three-way interaction
+bxp <- ggboxplot(
+  test_id, x = "level", y = "score", 
+  color = "TYPE", palette = "jco", facet.by = "group",
+  title = "Highpass level comparison",size=1)
+  
+#bxp
+
+res.aov <- test_id %>% anova_test(score ~ level*TYPE*group)
+res.aov #No three-way interaction 
+
+# Simple Two-way interactions 
+# No significant two-way interaction 
+model <- lm(score ~ level*TYPE*group, data=test_id)
+
+res.aov <- test_id %>%
+  group_by(group,level
+  )%>%anova_test(score~TYPE,error = model)
+
+# Compare different levels by group and level variable
+# Pairwise comparisons
+#https://www.datanovia.com/en/lessons/anova-in-r/#two-way-independent-anova
+library(emmeans)
+pwc <- test_id %>%
+  group_by(group, level) %>%
+  emmeans_test(score ~ TYPE, p.adjust.method = "bonferroni") %>%
+  select(-df, -statistic, -p) # Remove details
+
+pwc<-pwc %>% add_xy_position(x="level")
+
+bxp <- bxp+stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE,size=5)
+bxp
+
+ggsave(bxp,filename = "bxp_highpass.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/bxp_highpass.png")
+
+
+```
+
+```{r Histogram for local vs global,out.width="100%"}
+
+GS<-GS %>%mutate(TYPE=rep(c("GS")))
+GSR<- GSR %>% mutate(TYPE=rep(c("GSR")))
+
+test<-GS %>% bind_rows(GSR) 
+
+test_id <- test %>%
+  gather(key = "level", value = "score","1-Int","2-Ext","3-Ment") %>%
+  convert_as_factor(id, group,level,TYPE)
+
+# ANOVA three-way interaction
+bxp <- ggboxplot(
+  test_id, x = "level", y = "score", 
+  color = "TYPE", palette = "jco", facet.by = "group",
+  title = "Bandpass Level comparison"
+  )
+#bxp
+
+res.aov <- test_id %>% anova_test(score ~ level*TYPE*group)
+res.aov #No three-way interaction 
+
+# Simple Two-way interactions 
+# No significant two-way interaction 
+model <- lm(score ~ level*TYPE*group, data=test_id)
+
+res.aov <- test_id %>%
+  group_by(group,level
+  )%>%anova_test(score~TYPE,error = model)
+
+# Compare different levels by group and level variable
+# Pairwise comparisons
+#https://www.datanovia.com/en/lessons/anova-in-r/#two-way-independent-anova
+library(emmeans)
+pwc <- test_id %>%
+  group_by(group, level) %>%
+  emmeans_test(score ~ TYPE, p.adjust.method = "bonferroni") %>%
+  select(-df, -statistic, -p) # Remove details
+
+pwc <- pwc %>% add_xy_position(x="level")
+
+bxp <- bxp+stat_pvalue_manual(pwc, hide.ns = FALSE, tip.length = FALSE,size=5)
+bxp
+
+ggsave(bxp,filename = "bxp_bandpass.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/bxp_bandpass.png")
+
+```
+
+
+
+## GSCORR and Behavioral Relation
+
+```{r Preparing Task Data, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+# all_subj=tibble(KEY=character(),subj=character(),group=character(),trial=integer(),emotion=character(),task=character(),response=numeric())
+# subj_list=c()
+# for (i in c(1:34)){subj_list[i]=paste("subj_",i,sep = "")}
+# for (t in c(1:length(subj_list))){
+#   if(t %in% (c(1:20))){setwd(paste("E:/RESEARCH/GSCORR_DEP/GSCORR_RESEARCHPART/DATA/DM/",subj_list[t],"/",sep = ""))}
+#   if(t %in% (c(21:34))){setwd(paste("E:/RESEARCH/GSCORR_DEP/GSCORR_RESEARCHPART/DATA/CM/",subj_list[t],"/",sep = ""))}
+#   files<-list.files(pattern = "*_Behav.Rda",full.names = TRUE, recursive = TRUE)
+#   if(length(files)==0){next}
+#   if(files=="./Fatma Balın_Behav.Rda"){next}
+#   if(subj_list[t]=="subj_5" | subj_list[t]=="subj_7" | subj_list[t]=="subj_16"){next}
+#   load(files)
+#   KEY=c(rep(subj_list[t],times=nrow(test)))
+#   test<-test %>% mutate(.before=subj,KEY)
+#   all_subj<-all_subj %>% add_row(test)
+# }
+
+#Loads github behaviour file 
+load("C:/Users/kaan/Downloads/GSCORR-main/all_subj_behav.Rdata")
+
+test1=tibble(KEY=character(),group=character(),mean_reac=double(),sd_reac=double(),cv=double(),n=integer())
+subj_list=c()
+for (i in c(1:34)){subj_list[i]=paste("subj_",i,sep = "")}
+
+task1<-all_subj %>% filter(emotion=="notr") %>% filter(task=="attend")
+
+for (i in c(1:length(subj_list))){
+  if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+  carry<-task1 %>% filter(KEY==subj_list[i]) %>% summarise(mean_reac=mean(response,na.rm=TRUE),sd_reac=sd(response,na.rm = TRUE),n=n())
+  t<-all_subj %>% filter(KEY==subj_list[i])
+  carry<-cbind(group=t$group[1],carry)
+  carry<-cbind(KEY=subj_list[i],carry)
+  carry$cv<-carry$sd_reac/carry$mean_reac
+  test1<-test1 %>% add_row(carry)  
+}
+
+#test1<- test1 %>% mutate(GS_Int=GS[,"1-Int"]
+#)%>% mutate(GS_Ext=GS[,"2-Ext"]
+#)%>% mutate(GS_Ment=GS[,"3-Ment"]
+#)%>% mutate(GS_Grad=GS[,"GS_Grad"]
+#)%>% mutate(case=GS[,"case"])
+
+###Negative Stimuli#############
+test2_attend=tibble(KEY=character(),group=character(),mean_reac=double(),sd_reac=double(),cv=double(),n=integer())
+subj_list=c()
+for (i in c(1:34)){subj_list[i]=paste("subj_",i,sep = "")}
+
+for (i in c(1:length(subj_list))){
+   if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+  carry<-all_subj %>% filter(emotion=="negatif") %>% filter(KEY==subj_list[i]) %>% filter(task=="attend") %>% summarise(mean_reac=mean(response,na.rm=TRUE),sd_reac=sd(response,na.rm = TRUE),n=n())
+  t<-all_subj %>% filter(KEY==subj_list[i])
+  carry<-cbind(group=t$group[1],carry)
+  carry<-cbind(KEY=subj_list[i],carry)
+  carry$cv<-carry$sd_reac/carry$mean_reac
+  test2_attend<-test2_attend %>% add_row(carry)  
+}
+
+test2_reappraise=tibble(KEY=character(),group=character(),mean_reac=double(),sd_reac=double(),cv=double(),n=integer())
+subj_list=c()
+for (i in c(1:34)){subj_list[i]=paste("subj_",i,sep = "")}
+
+for (i in c(1:length(subj_list))){
+   if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+  carry<-all_subj %>% filter(emotion=="negatif") %>% filter(KEY==subj_list[i]) %>% filter(task=="azalt") %>% summarise(mean_reac=mean(response,na.rm=TRUE),sd_reac=sd(response,na.rm = TRUE),n=n())
+  t<-all_subj %>% filter(KEY==subj_list[i])
+  carry<-cbind(group=t$group[1],carry)
+  carry<-cbind(KEY=subj_list[i],carry)
+  carry$cv<-carry$sd_reac/carry$mean_reac
+  test2_reappraise<-test2_reappraise %>% add_row(carry)  
+}
+
+#test2_attend<- test2_attend %>% mutate(GS_Int=GS[,"1-Int"]
+#)%>% mutate(GS_Ext=GS[,"2-Ext"]
+#)%>% mutate(GS_Ment=GS[,"3-Ment"]
+#)%>% mutate(GS_Grad=GS[,"GS_Grad"]
+#)%>% mutate(case=GS[,"case"])
+
+#test2_reappraise<- test2_reappraise %>% mutate(GS_Int=GS[,"1-Int"]
+#)%>% mutate(GS_Ext=GS[,"2-Ext"]
+#)%>% mutate(GS_Ment=GS[,"3-Ment"]
+#)%>% mutate(GS_Grad=GS[,"GS_Grad"]
+#)%>% mutate(case=GS[,"case"])
+
+```
+
+
+```{r Data for Linear and Multinomial Regression,echo=FALSE,message=FALSE,warning=FALSE,results='hide'}
+
+# GS VALUES
+load("G:/Drive'ım/Research/GSCORR_RESEARCHPART/DATA/RESTRICTED_GS_TOPO_ALL_SUBJ_HIGHPASS.Rdata")
+GS<-as.data.frame(t(Zrval[1:3,1:34]))
+colnames(GS)<-c("1-Int","2-Ext","3-Ment")
+GS$group<-as.factor(c(rep("dep",20),rep("cont",14)))
+GS$case<-as.factor(c(rep("dep",20),rep("cont",14)))
+id<-data.frame(id=c(1:nrow(GS)))
+GS<-GS %>% mutate(id)
+GS<-GS%>%dplyr::filter(
+  id %in% index_KEY
+)
+
+# GSR VALUES
+load("G:/Drive'ım/Research/GSCORR_RESEARCHPART/DATA/RESTRICTED_GSR_TOPO_ALL_SUBJ_HIGHPASS.Rdata")
+GSR<-as.data.frame(t(Zrval[1:3,1:34]))
+colnames(GSR)<-c("1-Int","2-Ext","3-Ment")
+GSR$group<-as.factor(c(rep("dep",20),rep("cont",14)))
+GSR$case<-as.factor(c(rep("dep",20),rep("cont",14)))
+id<-data.frame(id=c(1:nrow(GSR)))
+GSR<-GSR %>% mutate(id)
+GSR<-GSR%>%dplyr::filter(
+  id %in% index_KEY
+)
+
+
+task2_reappraise<-all_subj %>% filter(emotion=="negatif") %>% filter(task=="azalt")
+task2_attend<-all_subj %>% filter(emotion=="negatif") %>% filter(task=="attend")
+
+task1<-task1 %>% mutate(GS_Int=NA,GS_Ext=NA,GS_Ment=NA,GSR_Int=NA,GSR_Ext=NA,GSR_Ment=NA)
+for (i in c(1:34)){
+  if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+RepNum<-nrow(task1[task1$KEY==subj_list[[i]],])
+task1[task1$KEY==subj_list[[i]],]$GS_Int<-rep(GS[i,"1-Int"],RepNum)
+task1[task1$KEY==subj_list[[i]],]$GS_Ext<-rep(GS[i,"2-Ext"],RepNum)
+task1[task1$KEY==subj_list[[i]],]$GS_Ment<-rep(GS[i,"3-Ment"],RepNum)
+task1[task1$KEY==subj_list[[i]],]$GSR_Int<-rep(GSR[i,"1-Int"],RepNum)
+task1[task1$KEY==subj_list[[i]],]$GSR_Ext<-rep(GSR[i,"2-Ext"],RepNum)
+task1[task1$KEY==subj_list[[i]],]$GSR_Ment<-rep(GSR[i,"3-Ment"],RepNum)
+}
+
+
+task2_attend<-task2_attend %>% mutate(GS_Int=NA,GS_Ext=NA,GS_Ment=NA,GSR_Int=NA,GSR_Ext=NA,GSR_Ment=NA)
+for (i in c(1:34)) {
+  if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+RepNum<-nrow(task2_attend[task2_attend$KEY==subj_list[[i]],])
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GS_Int<-rep(GS[i,"1-Int"],RepNum)
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GS_Ext<-rep(GS[i,"2-Ext"],RepNum)
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GS_Ment<-rep(GS[i,"3-Ment"],RepNum)
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GSR_Int<-rep(GSR[i,"1-Int"],RepNum)
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GSR_Ext<-rep(GSR[i,"2-Ext"],RepNum)
+task2_attend[task2_attend$KEY==subj_list[[i]],]$GSR_Ment<-rep(GSR[i,"3-Ment"],RepNum)
+}
+
+
+task2_reappraise<-task2_reappraise %>% mutate(GS_Int=NA,GS_Ext=NA,GS_Ment=NA,GSR_Int=NA,GSR_Ext=NA,GSR_Ment=NA)
+for (i in c(1:34)) {
+  if(subj_list[i]=="subj_5" | subj_list[i]=="subj_7" | subj_list[i]=="subj_16"){next}
+RepNum<-nrow(task2_reappraise[task2_reappraise$KEY==subj_list[[i]],])
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GS_Int<-rep(GS[i,"1-Int"],RepNum)
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GS_Ext<-rep(GS[i,"2-Ext"],RepNum)
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GS_Ment<-rep(GS[i,"3-Ment"],RepNum)
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GSR_Int<-rep(GSR[i,"1-Int"],RepNum)
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GSR_Ext<-rep(GSR[i,"2-Ext"],RepNum)
+task2_reappraise[task2_reappraise$KEY==subj_list[[i]],]$GSR_Ment<-rep(GSR[i,"3-Ment"],RepNum)
+}
+```
+
+### Negative Attend
+```{r}
+#Here since cross validation we use we avoid randomizing of train/test splitting
+#https://remiller1450.github.io/s230f19/caret3.html
+
+ACC<-matrix(ncol = 2,nrow = 3)
+colnames(ACC)<-c("GS","GSR")
+rownames(ACC)<-c("Negative Attend","Negative Reappraise","Neutral Attend")
+
+
+task2_attend$response <-as.factor(task2_attend$response)
+data=task2_attend
+data$group<-as.factor(data$group)
+data$CASE<-data$group
+data<-data %>% na.omit()
+#Names cannot start with numbers in R language
+data<-data %>% 
+  mutate(response = factor(response, 
+          labels = make.names(levels(response))))
+
+tuneGrid_mnl <- expand.grid(decay = seq(0, 1,by = 0.1))
+
+tControl <- trainControl(
+  method = "repeatedcv", #cross validation
+  number = 10, #10 folds
+  repeats = 5,
+  search = "random" #auto hyperparameter selection
+)
+
+#training$response<-relevel(training$response,ref="X1")
+
+data$response<-relevel(data$response,ref="X2")
+
+# model_mnl <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#                           data = training,
+#                           method = "multinom",
+#                           maxit = 100,
+#                           trace = FALSE, # suppress iterations
+#                           tuneGrid = tuneGrid_mnl,
+#                           trControl = tControl
+#                           )
+# 
+# 
+# caret::confusionMatrix(predict(model_mnl, 
+#                                newdata = testing, 
+#                                type = "raw"),
+#                                reference = testing$response)
+
+
+set.seed(123)
+fit1.GS <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+set.seed(123)
+fit1.GSR <- caret::train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+
+#Random Forest
+# set.seed(123)
+# fit2.GS <- train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# # 
+# set.seed(123)
+# fit2.GSR <- train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# 
+
+# rs <- resamples(list(mlr_GS = fit1.GS,mlr_GSR=fit1.GSR,rf_GS= fit2.GS,rf_GSR=fit2.GSR))
+# summary(rs)
+
+ConfMat_GS<-caret::confusionMatrix(predict(fit1.GS, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GS)$coefficients/summary(fit1.GS)$standard.errors
+z
+
+psig_GS <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GS
+
+ConfMat_GSR<-caret::confusionMatrix(predict(fit1.GSR, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GSR)$coefficients/summary(fit1.GSR)$standard.errors
+z
+
+psig_GSR <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GSR
+
+tt<-summary(fit1.GS$finalModel)
+RR_GS<-exp(tt$coefficients)
+tt<-summary(fit1.GSR$finalModel)
+RR_GSR<-exp(tt$coefficients)
+
+#+-+-+-Accuracy for table 
+ACC[1]<-round(unname(ConfMat_GS$overall[1]),3)
+ACC[4]<-round(unname(ConfMat_GSR$overall[1]),3)
+
+
+```
+
+```{r Negative_Attend Comparing k-fold Cross Validation MNL and Random Forests,echo=FALSE,warning=FALSE,error=FALSE,results='hide'}
+#Here since cross validation we use we avoid randomizing of train/test splitting
+#https://remiller1450.github.io/s230f19/caret3.html
+
+ACC<-matrix(ncol = 2,nrow = 3)
+colnames(ACC)<-c("GS","GSR")
+rownames(ACC)<-c("Negative Attend","Negative Reappraise","Neutral Attend")
+
+
+task2_attend$response <-as.factor(task2_attend$response)
+data=task2_attend
+data$group<-as.factor(data$group)
+data$CASE<-data$group
+data<-data %>% na.omit()
+#Names cannot start with numbers in R language
+data<-data %>% 
+  mutate(response = factor(response, 
+          labels = make.names(levels(response))))
+
+tuneGrid_mnl <- expand.grid(decay = seq(0, 1,by = 0.1))
+
+tControl <- trainControl(
+  method = "repeatedcv", #cross validation
+  number = 10, #10 folds
+  repeats = 5,
+  search = "random" #auto hyperparameter selection
+)
+
+#training$response<-relevel(training$response,ref="X1")
+
+data$response<-relevel(data$response,ref="X2")
+
+# model_mnl <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#                           data = training,
+#                           method = "multinom",
+#                           maxit = 100,
+#                           trace = FALSE, # suppress iterations
+#                           tuneGrid = tuneGrid_mnl,
+#                           trControl = tControl
+#                           )
+# 
+# 
+# caret::confusionMatrix(predict(model_mnl, 
+#                                newdata = testing, 
+#                                type = "raw"),
+#                                reference = testing$response)
+
+
+set.seed(123)
+fit1.GS <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+set.seed(123)
+fit1.GSR <- caret::train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+
+#Random Forest
+# set.seed(123)
+# fit2.GS <- train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# # 
+# set.seed(123)
+# fit2.GSR <- train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# 
+
+# rs <- resamples(list(mlr_GS = fit1.GS,mlr_GSR=fit1.GSR,rf_GS= fit2.GS,rf_GSR=fit2.GSR))
+# summary(rs)
+
+ConfMat_GS<-caret::confusionMatrix(predict(fit1.GS, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GS)$coefficients/summary(fit1.GS)$standard.errors
+z
+
+psig_GS <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GS
+
+ConfMat_GSR<-caret::confusionMatrix(predict(fit1.GSR, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GSR)$coefficients/summary(fit1.GSR)$standard.errors
+z
+
+psig_GSR <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GSR
+
+tt<-summary(fit1.GS$finalModel)
+RR_GS<-exp(tt$coefficients)
+tt<-summary(fit1.GSR$finalModel)
+RR_GSR<-exp(tt$coefficients)
+
+#+-+-+-Accuracy for table 
+ACC[1]<-round(unname(ConfMat_GS$overall[1]),3)
+ACC[4]<-round(unname(ConfMat_GSR$overall[1]),3)
+```
+
+
+
+```{r,out.width="100%"}
+#| fig.cap="Probability of Emotional response according to GSCORR while attending to the negative stimuli. Interoceptive GSCORR increases the relative risk ratio of weak and moderate responses compared to mild. When exteroceptive level GSCORR increases, the probability of moderate emotional response decreases compared to mild. When Mental GSCORR increases, the probability of a weak emotional response decreases."
+############Interoceptive#########
+IntPred<-data %>% select(CASE,GS_Int,GS_Ext,GS_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GS_Int), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GS_Int"), value.name = "probability")
+
+NAME<-c("Weak","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pInt<-ggplot(lpp, aes(x = GS_Int, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "Negative Stimuli with attending")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+#############Exteroceptive########
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GS_Ext), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GS_Ext"), value.name = "probability")
+
+NAME<-c("Weak","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GS_Ext, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+############Mental#######
+IntPred<-data %>% select(CASE,GS_Int,GS_Ext,GS_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GS_Ment), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GS_Ment"), value.name = "probability")
+
+NAME<-c("Weak","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pMent<-ggplot(lpp, aes(x = GS_Ment, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+
+pNeg<-ggarrange(pInt,pExt,pMent,
+                ncol = 3,common.legend = TRUE,
+                align = "h")
+
+pNeg<-annotate_figure(pNeg,top=text_grob("Global Signal Presented without low pass ",face = "bold",size = 12))
+
+ggsave(pNeg,filename = "pNeg_highpass.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/pNeg_highpass.png")
+```
+
+
+```{r Change GSR Multinomial Logistic Regression-Negative Attend,echo=FALSE,warning=FALSE,results='hide',message=FALSE,fig.show='hide',out.width="100%"}
+
+############Interoceptive#########
+IntPred<-data %>% select(CASE,GSR_Int,GSR_Ext,GSR_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GSR_Int), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GSR_Int"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.05)","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pInt<-ggplot(lpp, aes(x = GSR_Int, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+  labs(title = "GS REGRESSED",subtitle = "Negative Stimuli with attending")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+#############Exteroceptive########
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GSR_Ext), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GSR_Ext"), value.name = "probability")
+
+NAME<-c("Weak","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GSR_Ext, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+############Mental#######
+IntPred<-data %>% select(CASE,GSR_Int,GSR_Ext,GSR_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GSR_Ment), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GSR_Ment"), value.name = "probability")
+
+NAME<-c("Weak","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pMent<-ggplot(lpp, aes(x = GSR_Ment, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+
+pNeg_Att_GSR<-ggarrange(pInt,pExt,pMent,
+                        ncol = 3,common.legend = TRUE,align = "h")
+
+pNeg_Att_GSR<-annotate_figure(pNeg_Att_GSR,top=text_grob("Global Signal Regressed without low pass ",face = "bold",size = 12))
+
+ggsave(pNeg_Att_GSR,filename = "pNeg_Att_GSR_highpass.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/pNeg_Att_GSR_highpass.png")
+
+```
+
+### Negative Reappraise 
+
+```{r Negative_Reappraise,Comparing k-fold Cross Validation MNL and Random Forest,echo=FALSE,warning=FALSE,error=FALSE,results='hide'}
+#Here since cross validation we use we avoid randomizing of train/test splitting
+#https://remiller1450.github.io/s230f19/caret3.html
+task2_reappraise$response <-as.factor(task2_reappraise$response)
+data=task2_reappraise
+data$group<-as.factor(data$group)
+data$CASE<-data$group
+data<-data %>% na.omit()
+#Names cannot start with numbers in R language
+data<-data %>% 
+  mutate(response = factor(response, 
+          labels = make.names(levels(response))))
+
+
+tuneGrid_mnl <- expand.grid(decay = seq(0, 1,by = 0.1))
+
+tControl <- trainControl(
+  method = "repeatedcv", #cross validation
+  number = 10, #10 folds
+  repeats = 5,
+  search = "random" #auto hyperparameter selection
+)
+
+#training$response<-relevel(training$response,ref="X1")
+
+data$response<-relevel(data$response,ref="X2")
+
+# model_mnl <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#                           data = training,
+#                           method = "multinom",
+#                           maxit = 100,
+#                           trace = FALSE, # suppress iterations
+#                           tuneGrid = tuneGrid_mnl,
+#                           trControl = tControl
+#                           )
+# 
+# 
+# caret::confusionMatrix(predict(model_mnl, 
+#                                newdata = testing, 
+#                                type = "raw"),
+#                                reference = testing$response)
+
+
+set.seed(123)
+fit1.GS <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+set.seed(123)
+fit1.GSR <- caret::train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+
+# Random Forest 
+# set.seed(123)
+# fit2.GS <- train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# 
+# # set.seed(123)
+# fit2.GSR <- train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+
+
+# rs <- resamples(list(mlr_GS = fit1.GS,mlr_GSR=fit1.GSR,rf_GS= fit2.GS,rf_GSR=fit2.GSR))
+# summary(rs)
+
+ConfMat_GS<-caret::confusionMatrix(predict(fit1.GS, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GS)$coefficients/summary(fit1.GS)$standard.errors
+z
+
+psig_GS <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GS
+
+ConfMat_GSR<-caret::confusionMatrix(predict(fit1.GSR, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GSR)$coefficients/summary(fit1.GSR)$standard.errors
+z
+
+psig_GSR <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GSR
+
+tt<-summary(fit1.GS$finalModel)
+RR_GS<-exp(tt$coefficients)
+tt<-summary(fit1.GSR$finalModel)
+RR_GSR<-exp(tt$coefficients)
+
+#+-+-+-+-
+ACC[2]<-round(unname(ConfMat_GS$overall[1]),3)
+ACC[5]<-round(unname(ConfMat_GSR$overall[1]),3)
+```
+
+```{r Change Multinomial Logistic Regression-Negative Reappraise,echo=FALSE,warning=FALSE,results='hide',message=FALSE}
+#| fig.cap= "Probability of emotional response according to GSCORR while reappraising to the negative stimuli. Increase in interoceptive GSCORR increases change of weak emotional response with increase in strong emotional response, marginally (p=0.07). Increase in exteroceptive GSCORR increases chance of strong emotional response gradually, from weak to strong."
+############Interoceptive#########
+IntPred<-data %>% select(CASE,GS_Int,GS_Ext,GS_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GS_Int), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GS_Int"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.001)","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pInt<-ggplot(lpp, aes(x = GS_Int, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "Negative Stimuli with reappraising")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+#############Exteroceptive########
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GS_Ext), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GS_Ext"), value.name = "probability")
+
+NAME<-c("Weak \n(p*=0.09)","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GS_Ext, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+############Mental#######
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GS_Ment), predict(fit1.GS, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GS_Ment"), value.name = "probability")
+
+NAME<-c("Weak ","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pMent<-ggplot(lpp, aes(x = GS_Ment, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+
+pNeg_Reapp<-ggarrange(pInt,pExt,pMent,ncol = 3,common.legend = TRUE,align = "h")
+
+pNeg_Reapp<-annotate_figure(pNeg_Reapp,top=text_grob("Global Signal Presented without low pass ",face = "bold",size = 12))
+
+ggsave(pNeg_Reapp,filename = "pNeg_Reapp_highpass.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/pNeg_Reapp_highpass.png")
+
+
+
+```
+
+```{r Change GSR Multinomial Logistic Regression-Negative Reappraise,echo=FALSE,warning=FALSE,results='hide',message=FALSE}
+############Interoceptive#########
+IntPred<-data %>% select(CASE,GSR_Int,GSR_Ext,GSR_Ment)
+
+pp.IntPred<-cbind(IntPred %>% select(CASE,GSR_Int), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.IntPred, id.vars = c("CASE", "GSR_Int"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.001)","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pInt<-ggplot(lpp, aes(x = GSR_Int, y = probability, colour = CASE))+ 
+  geom_smooth()+ 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+  labs(title = "GS REGRESSED",subtitle = "Negative Stimuli with reappraising")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+#############Exteroceptive########
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GSR_Ext), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GSR_Ext"), value.name = "probability")
+
+NAME<-c("Weak \n(p*=0.09)","Mild \n(Reference)","Moderate","Strong \n(p<0.05)")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GSR_Ext, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+############Mental#######
+pp.ExtPred<-cbind(IntPred %>% select(CASE,GSR_Ment), predict(fit1.GSR, newdata = IntPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.ExtPred, id.vars = c("CASE", "GSR_Ment"), value.name = "probability")
+
+NAME<-c("Weak \n(p<0.001) ","Mild \n(Reference)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pMent<-ggplot(lpp, aes(x = GSR_Ment, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "")+
+  theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+pNeg_Reapp_GSR<-ggarrange(pInt,pExt,pMent,ncol = 3,common.legend = TRUE,align = "h")
+
+pNeg_Reapp_GSR<-annotate_figure(pNeg_Reapp_GSR,top=text_grob("Global Signal Regressed without low pass ",face = "bold",size = 12))
+
+ggsave(pNeg_Reapp_GSR,filename = "pNeg_Reapp_GSR_highpass.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/pNeg_Reapp_GSR_highpass.png")
+```
+
+### Neutral 
+
+```{r Neutral Comparing k-fold Cross Validation MNL and Random Forest,echo=FALSE,warning=FALSE,error=FALSE,results='hide'}
+#Here since cross validation we use we avoid randomizing of train/test splitting
+#https://remiller1450.github.io/s230f19/caret3.html
+#https://ashgreat.github.io/analyticsAppBook/multinomial-logistic-regression-mnl.html
+####
+task1$response <-as.factor(task1$response)
+data=task1
+data$group<-as.factor(data$group)
+data$CASE<-data$group
+data<-data %>% na.omit()
+#Names cannot start with numbers in R language
+data<-data %>% 
+  mutate(response = factor(response, 
+          labels = make.names(levels(response))))
+
+# Dividing is not neeeded with repeated CV 
+# set.seed(333)
+# ind<-sample(2,nrow(data),
+#             replace = TRUE,
+#             prob=c(0.6,0.4))
+# 
+# training<-data[ind==1,]
+# testing<-data[ind==2,]
+
+# trControl_mnl <- trainControl(method = "repeatedcv",
+#                               number = 10,
+#                               search = "grid",
+#                               classProbs = TRUE,
+#                               summaryFunction = multiClassSummary)
+# 
+tuneGrid_mnl <- expand.grid(decay = seq(0, 1, by = 0.1))
+
+tControl <- trainControl(
+  method = "repeatedcv", #cross validation
+  number = 10, #10 folds
+  repeats = 5,
+  search = "random" #auto hyperparameter selection
+)
+
+#training$response<-relevel(training$response,ref="X1")
+
+data$response<-relevel(data$response,ref="X1")
+
+# model_mnl <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#                           data = training,
+#                           method = "multinom",
+#                           maxit = 100,
+#                           trace = FALSE, # suppress iterations
+#                           tuneGrid = tuneGrid_mnl,
+#                           trControl = tControl
+#                           )
+# 
+# 
+# caret::confusionMatrix(predict(model_mnl, 
+#                                newdata = testing, 
+#                                type = "raw"),
+#                                reference = testing$response)
+
+
+set.seed(123)
+fit1.GS <- caret::train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+set.seed(123)
+fit1.GSR <- caret::train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+                          data = data,
+                          method = "multinom",
+                          maxit = 100,
+                          trace = FALSE, # suppress iterations
+                          tuneGrid = tuneGrid_mnl,
+                          trControl = tControl
+                          )
+
+# Random Forest 
+# set.seed(123)
+# fit2.GS <- train(response ~ GS_Int+GS_Ment+GS_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# # 
+# # set.seed(123)
+# fit2.GSR <- train(response ~ GSR_Int+GSR_Ment+GSR_Ext+CASE,
+#              data = data,
+#              method = "rf",
+#              trControl = tControl,
+#              proximity=TRUE,
+#              ntree = 741,
+#              keep.forest=TRUE,
+#              importance=TRUE)
+# 
+
+# rs <- resamples(list(mlr_GS = fit1.GS,mlr_GSR=fit1.GSR,rf_GS= fit2.GS,rf_GSR=fit2.GSR))
+# summary(rs)
+
+ConfMat_GS<-caret::confusionMatrix(predict(fit1.GS, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GS)$coefficients/summary(fit1.GS)$standard.errors
+z
+
+psig_GS <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GS
+
+ConfMat_GSR<-caret::confusionMatrix(predict(fit1.GSR, 
+                                            newdata = data, 
+                                            type = "raw"),
+                                            reference = data$response)
+
+z <- summary(fit1.GSR)$coefficients/summary(fit1.GSR)$standard.errors
+z
+
+psig_GSR <- (1 - pnorm(abs(z), 0, 1)) * 2
+psig_GSR
+
+tt<-summary(fit1.GS$finalModel)
+RR_GS<-exp(tt$coefficients)
+tt<-summary(fit1.GSR$finalModel)
+RR_GSR<-exp(tt$coefficients)
+
+ACC[3]<-round(unname(ConfMat_GS$overall[1]),3)
+ACC[6]<-round(unname(ConfMat_GSR$overall[1]),3)
+
+
+```
+
+
+```{r Change Multinomial Logistic Regression-Neutral,echo=FALSE,message=FALSE,warning=FALSE,message=FALSE,results='hide'}
+#| fig.cap= "Probability of emotional response according to GSCORR while attending to the neutral stimuli. Increase in exteroceptive GSCORR increases change of mild emotional response, whereas decreases weak emotional response. Increase in mental GSCORR decreases mild emotional response and increases weak emotional response in control group. However increase in mental GSCORR increases chance of mild emotional response and decreases weak emotional response in depression group."
+#Testing data from the data splitting
+GSPred<-data %>% select(CASE,GS_Ext,GS_Ment,GS_Int)
+
+######INTEROCEPTIVE##########
+pp.GSPred<-cbind(GSPred %>% select(CASE,GS_Int), predict(fit1.GS, newdata = GSPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GS_Int"), value.name = "probability")
+
+NAME<-c("Weak","Mild","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+
+pInt<-ggplot(lpp, aes(x = GS_Int, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  labs(subtitle = "Neutral Stimuli")+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+  
+
+
+
+########MENTAL########
+pp.GSPred<-cbind(GSPred %>% select(CASE,GS_Ment), predict(fit1.GS, newdata = GSPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GS_Ment"), value.name = "probability")
+
+NAME<-c("Weak \n(Reference)","Mild \n(p=.005)","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+
+pMent<-ggplot(lpp, aes(x = GS_Ment, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+  
+
+# ann_text <- data.frame(Ment= c(0, 0, 0, 0),
+#   probability=c(0, 0, 0.12, 0),
+#   label = "Text",
+#   variable = factor("Moderate",levels = NAME))
+# 
+# dat_text <- data.frame(
+#   label = c("", "", "p=.01",""),
+#   variable = NAME,
+#   x     = c(0, 0, 0, 0),
+#   y     = c(0, 0, 0.12, 0)
+# )
+# 
+# pMent<-pMent + geom_text(
+#   data    = ann_text,
+#   mapping= aes(Ment,probability,label=label)
+# )
+# 
+# pMent<-pMent + annotate("text",
+#   x=0,y=0.12,
+#   label="test"
+# )
+#######EXTEROCEPTIVE############
+pp.GSPred<-cbind(GSPred %>% select(CASE,GS_Ext), predict(fit1.GS, newdata = GSPred, type = "prob", se = TRUE))
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GS_Ext"), value.name = "probability")
+
+NAME<-c("Weak \n(Reference)","Mild \n(p<.001)","Moderate \n(p=.08*)","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GS_Ext, y = probability, colour = CASE)) + geom_smooth() + 
+  facet_grid(variable ~
+    ., scales = "free",labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+pNotr<-ggarrange(pInt,pExt,pMent,ncol = 3,common.legend = TRUE,align = "h")
+
+pNotr<-annotate_figure(pNotr,top=text_grob("Global Signal Presented without low pass ",face = "bold",size = 12))
+
+ggsave(pNotr,filename = "pNotr.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/pNotr.png")
+```
+
+
+```{r GSR Change Multinomial Logistic Regression-Neutral,echo=FALSE,message=FALSE,warning=FALSE,message=FALSE,results='hide'}
+#Testing data from the data splitting
+GSPred<-data %>% select(CASE,GSR_Ext,GSR_Ment,GSR_Int)
+
+######INTEROCEPTIVE##########
+pp.GSPred<-cbind(GSPred %>% select(CASE,GSR_Int), predict(fit1.GSR, newdata = GSPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GSR_Int"), value.name = "probability")
+
+NAME<-c("Weak","Mild","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+
+pInt<-ggplot(lpp, aes(x = GSR_Int, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  labs(title = "GS REGRESSED",subtitle = "Neutral Stimuli")+
+  xlab("Interoceptive GSCORR")+
+  ylab("Probability")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+  
+
+
+
+########MENTAL########
+pp.GSPred<-cbind(GSPred %>% select(CASE,GSR_Ment), predict(fit1.GSR, newdata = GSPred, type = "prob", se = TRUE))
+
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GSR_Ment"), value.name = "probability")
+
+NAME<-c("Weak \n(Reference)","Mild","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+
+pMent<-ggplot(lpp, aes(x = GSR_Ment, y = probability, colour = CASE)) + 
+  geom_smooth() + 
+  facet_grid(variable~.,scales = "free",
+             labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  labs(subtitle = "Neutral Stimuli")+
+  xlab("Mental GSCORR")+
+  ylab("Probability")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold")
+    )
+  
+
+# ann_text <- data.frame(Ment= c(0, 0, 0, 0),
+#   probability=c(0, 0, 0.12, 0),
+#   label = "Text",
+#   variable = factor("Moderate",levels = NAME))
+# 
+# dat_text <- data.frame(
+#   label = c("", "", "p=.01",""),
+#   variable = NAME,
+#   x     = c(0, 0, 0, 0),
+#   y     = c(0, 0, 0.12, 0)
+# )
+# 
+# pMent<-pMent + geom_text(
+#   data    = ann_text,
+#   mapping= aes(Ment,probability,label=label)
+# )
+# 
+# pMent<-pMent + annotate("text",
+#   x=0,y=0.12,
+#   label="test"
+# )
+#######EXTEROCEPTIVE############
+pp.GSPred<-cbind(GSPred %>% select(CASE,GSR_Ext), predict(fit1.GSR, newdata = GSPred, type = "prob", se = TRUE))
+lpp <- melt(pp.GSPred,id.vars = c("CASE", "GSR_Ext"), value.name = "probability")
+
+NAME<-c("Weak \n(Reference)","Mild","Moderate","Strong")
+names(NAME)<-c("X1","X2","X3","X4")
+
+pExt<-ggplot(lpp, aes(x = GSR_Ext, y = probability, colour = CASE)) + geom_smooth() + 
+  facet_grid(variable ~
+    ., scales = "free",labeller = as_labeller(NAME))+
+  scale_color_manual(values=c("#4DBBD5FF","#E64B35FF"),labels=c("Control","Depression"))+
+  xlab("Exteroceptive GSCORR")+
+  ylab("Probability")+
+  labs(subtitle = "Neutral Stimuli")+
+   theme_bw()+
+  theme(
+    plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text=element_text(size=10,face="bold"))
+
+
+pNotr_GSR<-ggarrange(pInt,pExt,pMent,ncol = 3,common.legend = TRUE,align = "h")
+
+pNotr_GSR<-annotate_figure(pNotr_GSR,top=text_grob("Global Signal Regressed without low pass ",face = "bold",size = 12))
+
+ggsave(pNotr_GSR,filename = "pNotr_GSR.png",
+         path="G:/Drive'ım/Research/GSCORR_RESEARCHPART/",
+         device = "png",
+         width = 1328,height = 531, dpi=96,units = c("px"))
+
+
+include_graphics("G:/Drive'ım/Research/GSCORR_RESEARCHPART/pNotr_GSR.png")
+```
